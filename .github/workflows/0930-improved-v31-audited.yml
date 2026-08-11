@@ -1,0 +1,41 @@
+name: 0930 improved V3.1 audited benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/improved_strategy_v31.py'
+      - 'research/0930_multimarket/audit_improved_v31.py'
+      - '.github/workflows/0930-improved-v31-audited.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-and-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install kagglehub pandas numpy requests pyarrow
+      - name: Run independent pre-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_improved_v31.py
+      - name: Run frozen V3.1 benchmark
+        working-directory: research/0930_multimarket
+        run: python -u improved_strategy_v31.py
+      - name: Run independent post-backtest ledger audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_improved_v31.py --post
+      - name: Upload audited V3.1 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-improved-v31-audited-results
+          path: research/0930_multimarket/improved_v31_output/
+          if-no-files-found: warn

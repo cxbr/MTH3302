@@ -1,0 +1,32 @@
+name: 0930 improved policy introspection
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/improved_policy_introspection.py'
+      - '.github/workflows/0930-improved-policy-introspection.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pandas numpy
+      - name: Inspect policy and simulator
+        working-directory: research/0930_multimarket
+        run: python -u improved_policy_introspection.py
+      - name: Upload introspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-improved-policy-introspection
+          path: research/0930_multimarket/improved_policy_introspection_output/
+          if-no-files-found: warn

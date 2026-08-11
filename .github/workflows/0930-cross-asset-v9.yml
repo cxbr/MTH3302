@@ -42,13 +42,24 @@ jobs:
           tar -xzf /tmp/cross_asset_v9.tgz
           python - <<'PY'
           from pathlib import Path
-          p = Path('audit_cross_asset_v9.py')
-          s = p.read_text(encoding='utf-8')
+
+          audit = Path('audit_cross_asset_v9.py')
+          source = audit.read_text(encoding='utf-8')
           old = 'rows.append({"test": name, "pass": bool(condition), "details": json.dumps(details, sort_keys=True)})'
           new = 'rows.append({"test": name, "pass": bool(condition), "details": json.dumps(details, sort_keys=True, default=lambda value: value.item() if hasattr(value, "item") else str(value))})'
-          if old not in s:
-              raise SystemExit('Expected pre-audit serialization line not found')
-          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          if old in source:
+              source = source.replace(old, new, 1)
+          audit.write_text(source, encoding='utf-8')
+
+          engine = Path('cross_asset_benchmark.py')
+          source = engine.read_text(encoding='utf-8')
+          old = '        close_until(trade.entry_ts)\n        local_date = trade.entry_ts.tz_convert("America/New_York").date()'
+          new = '        close_until(trade.entry_ts)\n        # Real portfolio rule: never hold two concurrent positions in the same instrument.\n        if any(position["alias"] == trade.alias for position in open_positions):\n            continue\n        local_date = trade.entry_ts.tz_convert("America/New_York").date()'
+          if old not in source:
+              raise SystemExit('Expected portfolio replay insertion point not found')
+          source = source.replace(old, new, 1)
+          source = source.replace('(math.inf if wins else math.nan)', '(999.0 if wins else math.nan)')
+          engine.write_text(source, encoding='utf-8')
           PY
           python -m py_compile cross_asset_benchmark.py audit_cross_asset_v9.py
           node --check cross_asset_v9_parallel_download.mjs

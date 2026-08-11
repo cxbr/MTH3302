@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install preparation dependencies
-        run: pip install duckdb
+        run: pip install duckdb pytz
       - name: Download ${{ matrix.split }} one-minute file
         working-directory: research/0930_multimarket
         run: |
@@ -80,7 +80,7 @@ jobs:
           merge-multiple: true
       - name: Install benchmark dependencies
         run: |
-          pip install pandas numpy pyarrow duckdb
+          pip install pandas numpy pyarrow duckdb pytz
       - name: Restore and adapt audited benchmark engine
         working-directory: research/0930_multimarket
         run: |

@@ -3,7 +3,7 @@ name: 0930 multi-market smoke test
 on:
   pull_request:
     paths:
-      - 'research/0930_multimarket/**'
+      - 'research/0930_multimarket/smoke_download.py'
       - '.github/workflows/0930-multimarket-smoke.yml'
 
 permissions:

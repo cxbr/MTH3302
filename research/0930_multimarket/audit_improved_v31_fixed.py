@@ -9,6 +9,10 @@ from backtest_engine import PreparedMarket, ReferenceEvent, find_entry
 from improved_strategy_v31 import strict_entry_config
 
 
+# The original audit fixture mixed integer and decimal literals. Pandas 3
+# correctly rejects writing decimals into integer columns. This wrapper keeps
+# the production strategy unchanged and fixes only the synthetic audit data so
+# that every OHLC column is explicitly float64 before any mutation.
 def fixed_entry_tests():
     rows = []
     idx = pd.date_range("2024-01-02 09:30", periods=10, freq="15min", tz=audit.LOCAL_TZ)
@@ -18,9 +22,10 @@ def fixed_entry_tests():
             "high": [102.0, 101.0, 103.0, 104.0, 104.0, 104.0, 104.0, 104.0, 104.0, 104.0],
             "low": [99.0, 99.5, 100.0, 101.0, 102.0, 102.0, 102.0, 102.0, 102.0, 102.0],
             "close": [101.0, 100.5, 102.5, 103.0, 103.0, 103.0, 103.0, 103.0, 103.0, 103.0],
-            "volume": 1.0,
+            "volume": [1.0] * 10,
         },
         index=idx,
+        dtype="float64",
     )
     event = ReferenceEvent("x", 0, 0, 0, 0, 0, 100.0)
     cfg = strict_entry_config()

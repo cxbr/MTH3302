@@ -1,13 +1,22 @@
 {
-  "snapshot": "dependency-fix-launch",
+  "snapshot": "sql-time-filter-fix",
   "runs": [
     {
-      "id": 31490366029,
+      "id": 31490519830,
       "status": "in_progress",
       "conclusion": null,
+      "head_sha": "1ba3645b8db15e7a7b0a4c8ca403ff9896914337",
+      "created_at": "2026-08-11T12:17:39Z",
+      "updated_at": "2026-08-11T12:17:44Z",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31490519830/artifacts"
+    },
+    {
+      "id": 31490366029,
+      "status": "completed",
+      "conclusion": "failure",
       "head_sha": "c806e1d9fd25e5dcd262903a848a5fb4d0aa6830",
       "created_at": "2026-08-11T12:15:40Z",
-      "updated_at": "2026-08-11T12:15:44Z",
+      "updated_at": "2026-08-11T12:16:24Z",
       "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31490366029/artifacts"
     },
     {

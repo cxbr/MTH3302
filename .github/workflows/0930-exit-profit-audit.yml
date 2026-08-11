@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'research/0930_multimarket/exit_profit_audit.py'
+      - 'research/0930_multimarket/scale_cross_audit.py'
       - '.github/workflows/0930-exit-profit-audit.yml'
 
 permissions:
@@ -25,6 +26,9 @@ jobs:
       - name: Audit exit code and benchmark 61 longer-hold policies
         working-directory: research/0930_multimarket
         run: python -u exit_profit_audit.py
+      - name: Test true EMA20 cross-under interpretation
+        working-directory: research/0930_multimarket
+        run: python -u scale_cross_audit.py
       - name: Upload exit audit results
         if: always()
         uses: actions/upload-artifact@v4

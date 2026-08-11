@@ -1,7 +1,20 @@
 {
-  "snapshot": "after-bootstrap-fix",
-  "total_count": 2,
+  "snapshot": "after-source-hash-fix",
+  "total_count": 3,
   "workflow_runs": [
+    {
+      "id": 31478698215,
+      "name": "Hot20 V6 ten-round benchmark",
+      "status": "completed",
+      "conclusion": "failure",
+      "event": "push",
+      "head_sha": "52910f751574d0b5eff4e49b01558a6fba4b7bd6",
+      "run_number": 3,
+      "created_at": "2026-08-11T09:39:40Z",
+      "updated_at": "2026-08-11T09:40:08Z",
+      "jobs_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31478698215/jobs",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31478698215/artifacts"
+    },
     {
       "id": 31478495319,
       "name": "Hot20 V6 ten-round benchmark",

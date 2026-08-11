@@ -9,7 +9,7 @@ on:
       - '.github/workflows/hot20-duka-probe.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: research/hot20-runner-v6-20260811
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -26,6 +28,14 @@ jobs:
       - name: Probe API and sample AAPL M15 data
         working-directory: research/0930_multimarket
         run: node hot20_duka_probe.mjs
+      - name: Commit probe result for deterministic retrieval
+        run: |
+          cp research/0930_multimarket/hot20_duka_probe_output/probe.json research/0930_multimarket/hot20_duka_probe_result.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add research/0930_multimarket/hot20_duka_probe_result.json
+          git commit -m 'Store Dukascopy probe result' || exit 0
+          git push origin HEAD:research/hot20-runner-v6-20260811
       - uses: actions/upload-artifact@v4
         with:
           name: hot20-duka-probe

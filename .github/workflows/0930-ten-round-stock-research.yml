@@ -5,6 +5,7 @@ on:
     paths:
       - 'research/0930_multimarket/stock_heavy_pipeline.py'
       - 'research/0930_multimarket/ten_round_stock_strategy_research.py'
+      - 'research/0930_multimarket/ten_round_stock_strategy_research_v2.py'
       - '.github/workflows/0930-ten-round-stock-research.yml'
 
 permissions:
@@ -28,7 +29,7 @@ jobs:
         run: python -u improved_system_bug_audit_v7.py
       - name: Run all ten stock-heavy improvement rounds
         working-directory: research/0930_multimarket
-        run: python -u ten_round_stock_strategy_research.py
+        run: python -u ten_round_stock_strategy_research_v2.py
       - name: Upload ten-round results
         if: always()
         uses: actions/upload-artifact@v4

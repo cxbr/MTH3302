@@ -1,0 +1,33 @@
+name: Hot20 Dukascopy probe
+
+on:
+  push:
+    branches:
+      - research/hot20-runner-v6-20260811
+    paths:
+      - 'research/0930_multimarket/hot20_duka_probe.mjs'
+      - '.github/workflows/hot20-duka-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dukascopy-node
+        working-directory: research/0930_multimarket
+        run: npm install dukascopy-node@1.50.0
+      - name: Probe API and sample AAPL M15 data
+        working-directory: research/0930_multimarket
+        run: node hot20_duka_probe.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hot20-duka-probe
+          path: research/0930_multimarket/hot20_duka_probe_output/
+          if-no-files-found: error

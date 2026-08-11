@@ -1,5 +1,5 @@
 {
-  "snapshot": "after-fast-72-launch",
+  "snapshot": "after-fast-timeout-launch",
   "full_runs": [
     {
       "id": 31481254125,
@@ -68,6 +68,19 @@
     }
   ],
   "fast_runs": [
+    {
+      "id": 31483294645,
+      "name": "Hot20 V6 ten-round fast benchmark",
+      "status": "in_progress",
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "9484ced31e9e7f3798b65512a9c1072caf11e304",
+      "run_number": 2,
+      "created_at": "2026-08-11T10:41:04Z",
+      "updated_at": "2026-08-11T10:41:07Z",
+      "jobs_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31483294645/jobs",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31483294645/artifacts"
+    },
     {
       "id": 31482304434,
       "name": "Hot20 V6 ten-round fast benchmark",

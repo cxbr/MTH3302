@@ -24,12 +24,24 @@ TV_MARKETS = {
 
 
 def download_tv_one(symbol: str, start: str, end: str, output: str) -> None:
+    import websocket
     from pytradingview import TVclient
 
+    websocket.setdefaulttimeout(30)
     start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
     end_dt = datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
     client = TVclient()
     chart = client.chart
+
+    def fail_and_close(*args):
+        print(f"TradingView error for {symbol}: {args!r}", flush=True)
+        try:
+            client.end()
+        except Exception:
+            pass
+
+    client.on_error(fail_and_close)
+    chart.on_error(fail_and_close)
     chart.set_up_chart()
 
     # Request large batches to make long-history runs practical.
@@ -44,9 +56,19 @@ def download_tv_one(symbol: str, start: str, end: str, output: str) -> None:
             "range": 5000,
         },
     )
-    chart.on_symbol_loaded(lambda _: print(f"loaded {symbol}: {chart.get_infos.get('description', '')}"))
-    client.on_connected(lambda _: chart.download_data(start=start_dt, end=end_dt, filename=output))
+    chart.on_symbol_loaded(
+        lambda _: print(
+            f"loaded {symbol}: {chart.get_infos.get('description', '')}",
+            flush=True,
+        )
+    )
+    client.on_connected(
+        lambda _: chart.download_data(start=start_dt, end=end_dt, filename=output)
+    )
+    print(f"connecting for {symbol}", flush=True)
     client.create_connection()
+    if not Path(output).exists():
+        raise RuntimeError(f"TradingView connection ended without creating {output}")
 
 
 def download_binance(symbol: str, start: str, end: str, output: Path) -> None:
@@ -74,14 +96,15 @@ def download_binance(symbol: str, start: str, end: str, output: Path) -> None:
 
 
 def inspect_csv(path: Path) -> dict:
-    df = pd.read_csv(path)
-    if df.empty:
+    raw = pd.read_csv(path)
+    if raw.empty:
         return {"path": str(path), "rows": 0}
     for col in ["time", "open", "high", "low", "close", "volume"]:
-        if col not in df.columns:
-            raise RuntimeError(f"{path}: missing {col}; columns={df.columns.tolist()}")
-    df["time"] = pd.to_numeric(df["time"], errors="coerce")
-    df = df.dropna(subset=["time"]).drop_duplicates("time").sort_values("time")
+        if col not in raw.columns:
+            raise RuntimeError(f"{path}: missing {col}; columns={raw.columns.tolist()}")
+    duplicate_times = int(raw["time"].duplicated().sum())
+    raw["time"] = pd.to_numeric(raw["time"], errors="coerce")
+    df = raw.dropna(subset=["time"]).drop_duplicates("time").sort_values("time")
     ts = pd.to_datetime(df["time"], unit="s", utc=True)
     diffs = ts.diff().dropna().dt.total_seconds()
     return {
@@ -90,7 +113,7 @@ def inspect_csv(path: Path) -> dict:
         "start_utc": ts.iloc[0].isoformat(),
         "end_utc": ts.iloc[-1].isoformat(),
         "median_step_seconds": float(diffs.median()) if len(diffs) else None,
-        "duplicate_times": int(pd.read_csv(path)["time"].duplicated().sum()),
+        "duplicate_times": duplicate_times,
     }
 
 
@@ -116,6 +139,7 @@ def main() -> None:
         path = OUT / f"{name}.csv"
         cmd = [
             sys.executable,
+            "-u",
             str(Path(__file__).resolve()),
             "--download-one",
             "--symbol",
@@ -127,11 +151,22 @@ def main() -> None:
             "--output",
             str(path),
         ]
+        print(f"starting {name} ({symbol})", flush=True)
         try:
-            subprocess.run(cmd, check=True, timeout=600)
+            completed = subprocess.run(
+                cmd,
+                check=True,
+                timeout=90,
+                text=True,
+                capture_output=True,
+            )
+            print(completed.stdout, flush=True)
+            if completed.stderr:
+                print(completed.stderr, file=sys.stderr, flush=True)
             metadata.append({"market": name, "symbol": symbol, **inspect_csv(path)})
         except Exception as exc:
             failures.append({"market": name, "symbol": symbol, "error": repr(exc)})
+            print(f"failed {name}: {exc!r}", flush=True)
 
     btc_path = OUT / "BTCUSDT.csv"
     try:
@@ -142,7 +177,7 @@ def main() -> None:
 
     result = {"metadata": metadata, "failures": failures}
     (OUT / "smoke_metadata.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2), flush=True)
     if failures:
         raise SystemExit(1)
 

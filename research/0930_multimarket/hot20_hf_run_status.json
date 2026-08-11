@@ -1,13 +1,22 @@
 {
-  "snapshot": "sql-time-filter-fix",
+  "snapshot": "duckdb-alias-fix",
   "runs": [
     {
+      "id": 31490678996,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "925cce69a240a0f6dea1d1e58c750b7aab85df31",
+      "created_at": "2026-08-11T12:19:41Z",
+      "updated_at": "2026-08-11T12:20:25Z",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31490678996/artifacts"
+    },
+    {
       "id": 31490519830,
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "failure",
       "head_sha": "1ba3645b8db15e7a7b0a4c8ca403ff9896914337",
       "created_at": "2026-08-11T12:17:39Z",
-      "updated_at": "2026-08-11T12:17:44Z",
+      "updated_at": "2026-08-11T12:18:26Z",
       "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31490519830/artifacts"
     },
     {

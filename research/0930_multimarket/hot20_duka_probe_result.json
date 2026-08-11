@@ -27,6 +27,193 @@
     "validateConfig",
     "validateConfigNode"
   ],
+  "metaType": "object",
+  "metaKeys": [
+    "0005hkhkd",
+    "0027hkhkd",
+    "0175hkhkd",
+    "0291hkhkd",
+    "0386hkhkd",
+    "0388hkhkd",
+    "0700hkhkd",
+    "0857hkhkd",
+    "0883hkhkd",
+    "0939hkhkd",
+    "0941hkhkd",
+    "0998hkhkd",
+    "1093hkhkd",
+    "1177hkhkd",
+    "1288hkhkd",
+    "1299hkhkd",
+    "1398hkhkd",
+    "1810hkhkd",
+    "1918hkhkd",
+    "2007hkhkd",
+    "2018hkhkd",
+    "2318hkhkd",
+    "2388hkhkd",
+    "2502jpjpy",
+    "2503jpjpy",
+    "2628hkhkd",
+    "2822hkhkd",
+    "2828hkhkd",
+    "2836hkhkd",
+    "2914jpjpy",
+    "3188hkhkd",
+    "3382jpjpy",
+    "3436jpjpy",
+    "3968hkhkd",
+    "3988hkhkd",
+    "4004jpjpy",
+    "4005jpjpy",
+    "4063jpjpy",
+    "4452jpjpy",
+    "4502jpjpy",
+    "4503jpjpy",
+    "4507jpjpy",
+    "4523jpjpy",
+    "4543jpjpy",
+    "4689jpjpy",
+    "4911jpjpy",
+    "5108jpjpy",
+    "5301jpjpy",
+    "5401jpjpy",
+    "6098jpjpy"
+  ],
+  "metaSample": [
+    [
+      "0005hkhkd",
+      {
+        "name": "0005.HK/HKD",
+        "code": "0005.HK-HKD",
+        "description": "HSBC Holdings Plc",
+        "startHourForTicks": "2018-01-02T01:00:00.039Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0027hkhkd",
+      {
+        "name": "0027.HK/HKD",
+        "code": "0027.HK-HKD",
+        "description": "Galaxy Entertainment Group Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.158Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0175hkhkd",
+      {
+        "name": "0175.HK/HKD",
+        "code": "0175.HK-HKD",
+        "description": "Geely Automobile Holdings Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.049Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0291hkhkd",
+      {
+        "name": "0291.HK/HKD",
+        "code": "0291.HK-HKD",
+        "description": "China Resources Beer Holdings Co Ltd",
+        "startHourForTicks": "2018-01-02T01:00:01.592Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0386hkhkd",
+      {
+        "name": "0386.HK/HKD",
+        "code": "0386.HK-HKD",
+        "description": "Sinopec Corp",
+        "startHourForTicks": "2018-03-01T01:00:00.103Z",
+        "startDayForMinuteCandles": "2018-03-01T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-03-01T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-03-01T00:00:00.000Z"
+      }
+    ],
+    [
+      "0388hkhkd",
+      {
+        "name": "0388.HK/HKD",
+        "code": "0388.HK-HKD",
+        "description": "HK Exchanges & Clearing Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.144Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0700hkhkd",
+      {
+        "name": "0700.HK/HKD",
+        "code": "0700.HK-HKD",
+        "description": "Tencent Holdings Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.210Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0857hkhkd",
+      {
+        "name": "0857.HK/HKD",
+        "code": "0857.HK-HKD",
+        "description": "PetroChina Co Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.089Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0883hkhkd",
+      {
+        "name": "0883.HK/HKD",
+        "code": "0883.HK-HKD",
+        "description": "China National Offshore Oil Corporation Ltd",
+        "startHourForTicks": "2018-01-02T01:00:00.152Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ],
+    [
+      "0939hkhkd",
+      {
+        "name": "0939.HK/HKD",
+        "code": "0939.HK-HKD",
+        "description": "China Construction Bank Corp",
+        "startHourForTicks": "2018-01-02T01:00:00.175Z",
+        "startDayForMinuteCandles": "2018-01-02T01:00:00.000Z",
+        "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+        "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+      }
+    ]
+  ],
+  "found": {
+    "aaplususd": true,
+    "msftususd": true,
+    "nvdaususd": true,
+    "amznususd": true,
+    "metaususd": false,
+    "fbususd": true,
+    "googlususd": true,
+    "tslaususd": true,
+    "amdususd": true,
+    "jpmususd": true
+  },
   "type": "object",
   "isArray": true,
   "length": 52,

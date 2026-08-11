@@ -115,15 +115,16 @@ async function runPool(items, concurrency) {
   return results;
 }
 
-const results = await runPool(TICKERS, 4);
+const results = await runPool(TICKERS, 10);
 const manifest = {
   requested: TICKERS.length,
   downloaded: results.filter((r) => r.status === 'downloaded').length,
   generated_at: new Date().toISOString(),
+  concurrency: 10,
   results,
 };
 fs.writeFileSync(path.join(HERE, 'hot20_v6_work', 'download_manifest.json'), JSON.stringify(manifest, null, 2));
-console.log(JSON.stringify({ requested: manifest.requested, downloaded: manifest.downloaded }, null, 2));
+console.log(JSON.stringify({ requested: manifest.requested, downloaded: manifest.downloaded, concurrency: manifest.concurrency }, null, 2));
 if (manifest.downloaded < 40) {
   throw new Error(`Only ${manifest.downloaded} tickers downloaded; need at least 40 for a credible top-20 scanner.`);
 }

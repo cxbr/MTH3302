@@ -27,7 +27,7 @@ jobs:
           python - <<'PY'
           import json
           src=json.load(open('/tmp/runs.json'))
-          out={'snapshot':'dependency-fix-launch','runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
+          out={'snapshot':'sql-time-filter-fix','runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
           open('research/0930_multimarket/hot20_hf_run_status.json','w').write(json.dumps(out,indent=2))
           PY
       - name: Commit status

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'research/0930_multimarket/cross_asset_v9_chunks/**'
+      - 'research/0930_multimarket/cross_asset_v9_parallel_download.mjs'
       - '.github/workflows/0930-cross-asset-v9.yml'
 
 permissions:
@@ -50,14 +51,34 @@ jobs:
           p.write_text(s.replace(old, new, 1), encoding='utf-8')
           PY
           python -m py_compile cross_asset_benchmark.py audit_cross_asset_v9.py
+          node --check cross_asset_v9_parallel_download.mjs
 
       - name: Run independent pre-backtest audit
         working-directory: research/0930_multimarket
         run: python -u audit_cross_asset_v9.py
 
+      - name: Restore cross-asset data cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            research/0930_multimarket/.dukascopy-cache
+            research/0930_multimarket/cross_asset_v9_data
+          key: cross-asset-v9-m15-2020-2025-v2-${{ github.run_id }}
+          restore-keys: |
+            cross-asset-v9-m15-2020-2025-v2-
+
       - name: Download synchronized bid and ask M15 histories
         working-directory: research/0930_multimarket
-        run: node cross_asset_download.mjs
+        run: node cross_asset_v9_parallel_download.mjs
+
+      - name: Save cross-asset data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            research/0930_multimarket/.dukascopy-cache
+            research/0930_multimarket/cross_asset_v9_data
+          key: cross-asset-v9-m15-2020-2025-v2-${{ github.run_id }}
 
       - name: Run ten-round cross-asset benchmark
         working-directory: research/0930_multimarket
@@ -72,7 +93,7 @@ jobs:
         working-directory: research/0930_multimarket
         run: |
           mkdir -p cross_asset_v9_output/source
-          cp cross_asset_download.mjs cross_asset_benchmark.py audit_cross_asset_v9.py cross_asset_v9_output/source/ || true
+          cp cross_asset_v9_parallel_download.mjs cross_asset_download.mjs cross_asset_benchmark.py audit_cross_asset_v9.py cross_asset_v9_output/source/ || true
           cp cross_asset_v9_data/download_manifest.json cross_asset_v9_output/ || true
           npm list dukascopy-node --json > cross_asset_v9_output/npm_dependency_tree.json || true
 

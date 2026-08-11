@@ -22,12 +22,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 20
+          sleep 25
           gh api '/repos/${{ github.repository }}/actions/workflows/hot20-v6-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/status.json
           python - <<'PY'
           import json
           src=json.load(open('/tmp/status.json'))
-          out={'snapshot':'after-source-hash-fix','total_count':src.get('total_count'), 'workflow_runs':[]}
+          out={'snapshot':'after-audit-chunk-restore','total_count':src.get('total_count'), 'workflow_runs':[]}
           for r in src.get('workflow_runs',[]):
               out['workflow_runs'].append({k:r.get(k) for k in ['id','name','status','conclusion','event','head_sha','run_number','created_at','updated_at','jobs_url','artifacts_url']})
           json.dump(out, open('research/0930_multimarket/hot20_v6_status.json','w'), indent=2)

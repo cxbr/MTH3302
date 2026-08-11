@@ -5,6 +5,7 @@ on:
     paths:
       - 'research/0930_multimarket/improved_strategy_v31.py'
       - 'research/0930_multimarket/audit_improved_v31.py'
+      - 'research/0930_multimarket/audit_improved_v31_fixed.py'
       - '.github/workflows/0930-improved-v31-audited.yml'
 
 permissions:
@@ -25,13 +26,13 @@ jobs:
           pip install kagglehub pandas numpy requests pyarrow
       - name: Run independent pre-backtest audit
         working-directory: research/0930_multimarket
-        run: python -u audit_improved_v31.py
+        run: python -u audit_improved_v31_fixed.py
       - name: Run frozen V3.1 benchmark
         working-directory: research/0930_multimarket
         run: python -u improved_strategy_v31.py
       - name: Run independent post-backtest ledger audit
         working-directory: research/0930_multimarket
-        run: python -u audit_improved_v31.py --post
+        run: python -u audit_improved_v31_fixed.py --post
       - name: Upload audited V3.1 results
         if: always()
         uses: actions/upload-artifact@v4

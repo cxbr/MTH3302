@@ -1,0 +1,39 @@
+name: Hot20 HF benchmark status
+
+on:
+  push:
+    branches:
+      - research/hot20-runner-v6-20260811
+    paths:
+      - '.github/workflows/hot20-hf-run-status.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/hot20-runner-v6-20260811
+      - name: Query benchmark workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 15
+          gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/runs.json
+          python - <<'PY'
+          import json
+          src=json.load(open('/tmp/runs.json'))
+          out={'runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
+          open('research/0930_multimarket/hot20_hf_run_status.json','w').write(json.dumps(out,indent=2))
+          PY
+      - name: Commit status
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add research/0930_multimarket/hot20_hf_run_status.json
+          git commit -m 'Record Hot20 HF benchmark status' || exit 0
+          git push origin HEAD:research/hot20-runner-v6-20260811

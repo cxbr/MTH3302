@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'research/0930_multimarket/improved_policy_introspection.py'
+      - 'research/0930_multimarket/improved_policy_introspection_v2.py'
       - '.github/workflows/0930-improved-policy-introspection.yml'
 
 permissions:
@@ -22,7 +23,7 @@ jobs:
         run: pip install pandas numpy requests
       - name: Inspect policy and simulator
         working-directory: research/0930_multimarket
-        run: python -u improved_policy_introspection.py
+        run: python -u improved_policy_introspection_v2.py
       - name: Upload introspection
         if: always()
         uses: actions/upload-artifact@v4

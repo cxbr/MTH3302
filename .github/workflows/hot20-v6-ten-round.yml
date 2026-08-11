@@ -1,0 +1,75 @@
+name: Hot20 V6 ten-round benchmark
+
+on:
+  push:
+    branches:
+      - research/hot20-runner-v6-20260811
+    paths:
+      - 'research/0930_multimarket/hot20_duka_download.mjs'
+      - 'research/0930_multimarket/hot20_v6_bootstrap/**'
+      - '.github/workflows/hot20-v6-ten-round.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/hot20-runner-v6-20260811
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy pyarrow requests
+          cd research/0930_multimarket
+          npm install dukascopy-node@1.50.0
+      - name: Restore frozen Python benchmark and audit
+        working-directory: research/0930_multimarket
+        run: |
+          cat hot20_v6_bootstrap/part_* > /tmp/hot20_v6.b64
+          base64 --decode /tmp/hot20_v6.b64 > /tmp/hot20_v6.tgz
+          echo '002094f1f79513c817f98964412792e81243f625da0ad02d5bf378d9192d071d  /tmp/hot20_v6.tgz' | sha256sum --check
+          tar -xzf /tmp/hot20_v6.tgz
+          python -m py_compile hot20_v6_benchmark.py audit_hot20_v6.py
+      - name: Download broad liquid-stock M15 universe
+        working-directory: research/0930_multimarket
+        run: node hot20_duka_download.mjs
+      - name: Run independent pre-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_hot20_v6.py
+      - name: Run ten sequential Hot20 improvement rounds
+        working-directory: research/0930_multimarket
+        run: python -u hot20_v6_benchmark.py
+      - name: Run post-backtest portfolio, leakage, and ledger audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_hot20_v6.py --post
+      - name: Package and commit compact results
+        run: |
+          cd research/0930_multimarket
+          zip -r hot20_v6_result.zip hot20_v6_output -x 'hot20_v6_output/hot_scanner_daily_features.parquet'
+          cp hot20_v6_output/summary.json hot20_v6_result_summary.json
+          cp hot20_v6_output/RESULTS.txt hot20_v6_result_results.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hot20_v6_result.zip hot20_v6_result_summary.json hot20_v6_result_results.txt
+          git commit -m 'Store Hot20 V6 ten-round benchmark results' || exit 0
+          git push origin HEAD:research/hot20-runner-v6-20260811
+      - name: Upload complete benchmark outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hot20-v6-ten-round-results
+          path: |
+            research/0930_multimarket/hot20_v6_output/
+            research/0930_multimarket/hot20_v6_work/download_manifest.json
+          if-no-files-found: warn
+          retention-days: 90

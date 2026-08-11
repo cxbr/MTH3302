@@ -1,7 +1,6 @@
 {
-  "snapshot": "after-concurrency-10-launch",
-  "total_count": 5,
-  "workflow_runs": [
+  "snapshot": "after-fast-72-launch",
+  "full_runs": [
     {
       "id": 31481254125,
       "name": "Hot20 V6 ten-round benchmark",
@@ -66,6 +65,21 @@
       "updated_at": "2026-08-11T09:23:36Z",
       "jobs_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31477450108/jobs",
       "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31477450108/artifacts"
+    }
+  ],
+  "fast_runs": [
+    {
+      "id": 31482304434,
+      "name": "Hot20 V6 ten-round fast benchmark",
+      "status": "in_progress",
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "ad0b98d85ec4dab2aff0df17772240d1ecccdd71",
+      "run_number": 1,
+      "created_at": "2026-08-11T10:27:46Z",
+      "updated_at": "2026-08-11T10:27:49Z",
+      "jobs_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31482304434/jobs",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31482304434/artifacts"
     }
   ]
 }

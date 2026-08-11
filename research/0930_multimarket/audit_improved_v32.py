@@ -84,6 +84,22 @@ def additional_management_gate_tests():
     return rows
 
 
+def install_mixed_timezone_audit_fix() -> None:
+    """Normalize timestamps to UTC only inside the independent audit.
+
+    The five markets span EST/EDT offsets and crypto/futures timestamps. Pandas
+    3 refuses a mixed-offset vector unless utc=True. This affects only the
+    chronology/overlap checker; it does not change any signal, fill, or result.
+    """
+    original_to_datetime = audit.pd.to_datetime
+
+    def audited_to_datetime(*args, **kwargs):
+        kwargs.setdefault("utc", True)
+        return original_to_datetime(*args, **kwargs)
+
+    audit.pd.to_datetime = audited_to_datetime
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--post", action="store_true")
@@ -97,7 +113,11 @@ def main():
     original_simulation_tests = audit.simulation_tests
     audit.simulation_tests = lambda: original_simulation_tests() + additional_management_gate_tests()
 
-    df = audit.post_audit() if args.post else audit.pre_audit()
+    if args.post:
+        install_mixed_timezone_audit_fix()
+        df = audit.post_audit()
+    else:
+        df = audit.pre_audit()
     print(df.to_string(index=False))
 
 

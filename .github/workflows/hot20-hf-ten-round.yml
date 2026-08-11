@@ -49,6 +49,10 @@ jobs:
           if "SET TimeZone='America/New_York'" not in s:
               s=s.replace('con.execute("PRAGMA threads=4")\n    con.execute("PRAGMA memory_limit=\'8GB\'")', 'con.execute("PRAGMA threads=4")\n    con.execute("SET TimeZone=\'America/New_York\'")\n    con.execute("PRAGMA memory_limit=\'8GB\'")')
           s=s.replace('OVERWRITE_OR_IGNORE TRUE','OVERWRITE_OR_IGNORE')
+          s=s.replace(
+              "AND CAST(datetime AS TIME) >= TIME '09:30:00'\n        AND CAST(datetime AS TIME) <  TIME '16:00:00'",
+              "AND (EXTRACT(hour FROM datetime) * 60 + EXTRACT(minute FROM datetime)) >= 570\n        AND (EXTRACT(hour FROM datetime) * 60 + EXTRACT(minute FROM datetime)) < 960"
+          )
           p.write_text(s)
 
           p=Path('stock_v4_engine.py')

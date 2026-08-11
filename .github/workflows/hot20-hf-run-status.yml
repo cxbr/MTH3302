@@ -18,16 +18,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: research/hot20-runner-v6-20260811
-      - name: Query benchmark workflow
+      - name: Query direct and parallel benchmark workflows
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 90
-          gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/runs.json
+          sleep 15
+          gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/direct.json
+          gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-parallel-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/parallel.json
           python - <<'PY'
           import json
-          src=json.load(open('/tmp/runs.json'))
-          out={'snapshot':'direct-download-run','runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
+          def compact(path):
+              src=json.load(open(path))
+              return [{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]
+          out={'snapshot':'parallel-launch','direct_runs':compact('/tmp/direct.json'),'parallel_runs':compact('/tmp/parallel.json')}
           open('research/0930_multimarket/hot20_hf_run_status.json','w').write(json.dumps(out,indent=2))
           PY
       - name: Commit status

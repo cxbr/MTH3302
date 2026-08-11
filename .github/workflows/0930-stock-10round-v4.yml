@@ -1,0 +1,48 @@
+name: 0930 stock-first ten-round V4 benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/stock10_bootstrap/**'
+      - '.github/workflows/0930-stock-10round-v4.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-and-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install kagglehub pandas numpy requests pyarrow
+      - name: Restore frozen benchmark scripts
+        working-directory: research/0930_multimarket
+        run: |
+          cat stock10_bootstrap/part_* > /tmp/stock10.b64
+          base64 --decode /tmp/stock10.b64 > /tmp/stock10.tgz
+          echo '785e87856b5a924bd678aa4dcbefb43707fedd932bfdfa2bdc1391e346e0a991  /tmp/stock10.tgz' | sha256sum --check
+          tar -xzf /tmp/stock10.tgz
+          python -m py_compile stock_v4_data.py stock_v4_engine.py stock_10round_v4.py audit_stock_10round_v4.py
+      - name: Run independent pre-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_stock_10round_v4.py
+      - name: Run ten sequential improvement rounds
+        working-directory: research/0930_multimarket
+        run: python -u stock_10round_v4.py
+      - name: Run independent post-backtest ledger audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_stock_10round_v4.py --post
+      - name: Upload complete stock-first benchmark
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-stock-10round-v4-results
+          path: research/0930_multimarket/stock_10round_v4_output/
+          if-no-files-found: warn

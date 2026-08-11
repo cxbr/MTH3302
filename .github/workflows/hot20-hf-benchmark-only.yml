@@ -1,5 +1,6 @@
 name: Hot20 HF prepared-data ten-round benchmark
 
+# Uses the already-audited 51-stock aggregate artifacts from run 31492910051.
 on:
   push:
     branches:

@@ -86,12 +86,7 @@ def additional_management_gate_tests():
 
 
 def post_audit_v32() -> pd.DataFrame:
-    """Independent audit of the completed benchmark and every trade ledger.
-
-    This implementation deliberately avoids pandas namedtuple fields beginning
-    with underscores and normalizes all market timestamps to UTC for comparison.
-    It does not alter strategy results; it only verifies them.
-    """
+    """Independent audit of the completed benchmark and every trade ledger."""
     rows: List[dict] = []
     trade_path = OUT / "trade_log.csv"
     metric_path = OUT / "market_period_metrics.csv"
@@ -118,13 +113,26 @@ def post_audit_v32() -> pd.DataFrame:
     numeric_trade_cols = [
         "quantity", "planned_risk_pct", "net_pnl", "r_multiple",
         "weighted_exit_exec", "equity_before", "equity_after",
-        "notional_multiple",
     ]
     trade_numeric = trades[numeric_trade_cols].to_numpy(dtype=float)
     rows.append(audit.result(
         "trade_ledger_values_finite",
         bool(np.isfinite(trade_numeric).all()),
         str(numeric_trade_cols),
+    ))
+
+    trend_candidate_ids = [
+        candidate_id
+        for candidate_id, candidate in catalog.items()
+        if candidate.exit_policy is not None
+    ]
+    trend_notional = trades.loc[
+        trades.candidate_id.isin(trend_candidate_ids), "notional_multiple"
+    ].to_numpy(dtype=float)
+    rows.append(audit.result(
+        "trend_notional_values_finite",
+        bool(np.isfinite(trend_notional).all()),
+        f"trend_rows={len(trend_notional)}",
     ))
     rows.append(audit.result(
         "positive_quantities",
@@ -236,9 +244,7 @@ def post_audit_v32() -> pd.DataFrame:
         fill_details or "weighted fill price matches ledger",
     ))
 
-    metric_cols = [
-        "total_return", "max_drawdown", "ending_equity", "trades"
-    ]
+    metric_cols = ["total_return", "max_drawdown", "ending_equity", "trades"]
     finite_metrics = np.isfinite(metrics[metric_cols].to_numpy(dtype=float)).all()
     rows.append(audit.result(
         "market_metrics_finite",
@@ -253,10 +259,7 @@ def post_audit_v32() -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     df.to_csv(OUT / "post_backtest_audit.csv", index=False)
-    summary = {
-        "all_passed": bool(df["pass"].all()),
-        "tests": rows,
-    }
+    summary = {"all_passed": bool(df["pass"].all()), "tests": rows}
     (OUT / "audit_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )

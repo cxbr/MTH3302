@@ -5,65 +5,14 @@ on:
     branches:
       - research/hot20-runner-v6-20260811
     paths:
-      - 'research/0930_multimarket/hot20_hf_split_prepare.py'
-      - 'research/0930_multimarket/hot20_hf_finalize.py'
       - '.github/workflows/hot20-hf-parallel-ten-round.yml'
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
-  prepare:
-    strategy:
-      fail-fast: false
-      matrix:
-        split: [train, val, test]
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: research/hot20-runner-v6-20260811
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install preparation dependencies
-        run: pip install duckdb pytz
-      - name: Download ${{ matrix.split }} one-minute file
-        working-directory: research/0930_multimarket
-        run: |
-          mkdir -p hot20_hf_input
-          output="hot20_hf_input/${{ matrix.split }}.parquet"
-          url="https://huggingface.co/datasets/twelvedata/financial-world-model/resolve/main/bars_1min/${{ matrix.split }}.parquet?download=true"
-          sleep $((RANDOM % 30))
-          for attempt in $(seq 1 15); do
-            echo "split=${{ matrix.split }} attempt=${attempt} bytes=$(stat -c%s "$output" 2>/dev/null || echo 0)"
-            if curl -L --fail --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 30 --max-time 1800 -A 'Mozilla/5.0 Hot20ParallelResearch/1.0' -C - -o "$output" "$url"; then
-              test -s "$output" && break
-            fi
-            sleep $((attempt * 20))
-          done
-          test -s "$output"
-          ls -lh "$output"
-      - name: Aggregate ${{ matrix.split }} to causal 15-minute bars
-        working-directory: research/0930_multimarket
-        run: |
-          python -u hot20_hf_split_prepare.py \
-            --split '${{ matrix.split }}' \
-            --input 'hot20_hf_input/${{ matrix.split }}.parquet' \
-            --output-dir 'hot20_hf_split_output'
-          ls -lh hot20_hf_split_output
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hot20-hf-agg-${{ matrix.split }}
-          path: |
-            research/0930_multimarket/hot20_hf_split_output/${{ matrix.split }}_15m.parquet
-            research/0930_multimarket/hot20_hf_split_output/${{ matrix.split }}_stats.json
-          if-no-files-found: error
-          retention-days: 3
-
   benchmark:
-    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -78,9 +27,10 @@ jobs:
           pattern: hot20-hf-agg-*
           path: research/0930_multimarket/hot20_hf_aggregated
           merge-multiple: true
-      - name: Install benchmark dependencies
-        run: |
-          pip install pandas numpy pyarrow duckdb pytz
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+      - name: Install complete benchmark dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests
       - name: Restore and adapt audited benchmark engine
         working-directory: research/0930_multimarket
         run: |
@@ -94,6 +44,7 @@ jobs:
           tar -xzf /tmp/stock_v4_deps.tgz
           python - <<'PY'
           from pathlib import Path
+
           p=Path('stock_v4_engine.py')
           s=p.read_text()
           s=s.replace(
@@ -101,6 +52,7 @@ jobs:
               '''def aligned_bucket_keys(index, period_minutes):\n    minutes = (index.hour * 60 + index.minute).to_numpy(dtype=np.int32)\n    ordinals = np.asarray([d.toordinal() for d in index.date], dtype=np.int64)\n    before_open = minutes < 570\n    session_ord = ordinals - before_open.astype(np.int64)\n    offset = (minutes - 570) % 1440\n    return session_ord * 1000 + offset // period_minutes'''
           )
           p.write_text(s)
+
           p=Path('hot20_v6_benchmark.py')
           s=p.read_text()
           s=s.replace('Dukascopy historical M15 CFD/bid-derived candles','Twelve Data one-minute US equity bars via Hugging Face, aggregated to M15')
@@ -108,15 +60,24 @@ jobs:
           s=s.replace('Dukascopy m15; volume is provider/tick volume, not consolidated exchange volume','Twelve Data regular-session trade volume redistributed through the Hugging Face dataset')
           s=s.replace('Dukascopy provider/tick volume; used only as within-stock relative volume','Twelve Data regular-session trade volume; hot ranks use only same-day causal information')
           p.write_text(s)
+
+          p=Path('audit_hot20_v6.py')
+          s=p.read_text()
+          needle='import hot20_v6_benchmark as bench\n'
+          replacement='''import hot20_v6_benchmark as bench\n\n_period_path = Path("hot20_v6_work/periods.json")\nif _period_path.exists():\n    _period_payload = json.loads(_period_path.read_text(encoding="utf-8"))\n    bench.PERIOD_YEARS = {key: tuple(value) for key, value in _period_payload["periods"].items()}\n'''
+          if needle not in s:
+              raise RuntimeError('Could not patch audit periods')
+          s=s.replace(needle,replacement,1)
+          p.write_text(s)
           PY
           python -m py_compile hot20_v6_benchmark.py audit_hot20_v6.py backtest_engine.py data_pipeline.py stock_v4_data.py stock_v4_engine.py hot20_hf_finalize.py
-      - name: Merge splits and create 51-stock M15 universe
+      - name: Merge prepared splits into 51-stock M15 universe
         working-directory: research/0930_multimarket
         run: python -u hot20_hf_finalize.py --input-dir hot20_hf_aggregated
       - name: Run independent pre-backtest audit
         working-directory: research/0930_multimarket
         run: python -u audit_hot20_v6.py
-      - name: Run ten sequential Hot20 improvement rounds
+      - name: Run all ten sequential Hot20 improvement rounds
         working-directory: research/0930_multimarket
         run: |
           python -u - <<'PY'
@@ -127,7 +88,7 @@ jobs:
           print('PERIOD_YEARS',bench.PERIOD_YEARS,flush=True)
           bench.main()
           PY
-      - name: Run post-backtest portfolio and ledger audit
+      - name: Run independent post-backtest portfolio and ledger audit
         working-directory: research/0930_multimarket
         run: python -u audit_hot20_v6.py --post
       - name: Attach preparation manifests
@@ -139,7 +100,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: hot20-hf-parallel-ten-round-results
+          name: hot20-hf-prepared-ten-round-results
           path: research/0930_multimarket/hot20_v6_output/
           if-no-files-found: warn
           retention-days: 90

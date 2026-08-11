@@ -34,7 +34,7 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Install benchmark dependencies
-        run: pip install pandas numpy pyarrow duckdb pytz
+        run: pip install pandas numpy pyarrow duckdb pytz requests
 
       - name: Restore frozen V10 benchmark source
         working-directory: research/0930_multimarket

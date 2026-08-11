@@ -26,7 +26,10 @@ jobs:
           pip install kagglehub pandas numpy requests pyarrow
       - name: Run exact rule and 347 comparison variants
         working-directory: research/0930_multimarket
-        run: python -u run_benchmark.py
+        run: |
+          sed -i 's/market\.atr14\[:\] = 1\.0/market.atr14 = np.full_like(market.atr14, 1.0)/' backtest_engine.py
+          python -u run_benchmark.py
+          cp data_pipeline.py backtest_engine.py run_benchmark.py output/
       - name: Upload complete results
         if: always()
         uses: actions/upload-artifact@v4

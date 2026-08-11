@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install pandas numpy
+        run: pip install pandas numpy requests
       - name: Inspect policy and simulator
         working-directory: research/0930_multimarket
         run: python -u improved_policy_introspection.py

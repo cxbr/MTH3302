@@ -22,12 +22,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 12
+          sleep 90
           gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/runs.json
           python - <<'PY'
           import json
           src=json.load(open('/tmp/runs.json'))
-          out={'snapshot':'duckdb-alias-fix','runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
+          out={'snapshot':'direct-download-run','runs':[{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]}
           open('research/0930_multimarket/hot20_hf_run_status.json','w').write(json.dumps(out,indent=2))
           PY
       - name: Commit status

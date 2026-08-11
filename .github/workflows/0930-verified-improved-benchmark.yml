@@ -17,6 +17,7 @@ on:
       - 'research/0930_multimarket/verified_improved_benchmark_v5.py'
       - 'research/0930_multimarket/verified_improved_benchmark_v6.py'
       - 'research/0930_multimarket/verified_improved_benchmark_v7.py'
+      - 'research/0930_multimarket/verified_improved_benchmark_v8.py'
       - '.github/workflows/0930-verified-improved-benchmark.yml'
 
 permissions:
@@ -40,7 +41,7 @@ jobs:
         run: python -u improved_system_bug_audit_v7.py
       - name: Run benchmark only after audit passes
         working-directory: research/0930_multimarket
-        run: python -u verified_improved_benchmark_v7.py
+        run: python -u verified_improved_benchmark_v8.py
       - name: Upload verified results
         if: always()
         uses: actions/upload-artifact@v4

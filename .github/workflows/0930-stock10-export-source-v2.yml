@@ -1,0 +1,30 @@
+name: 0930 export stock10 source v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/0930-stock10-export-source-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore frozen source archive
+        working-directory: research/0930_multimarket
+        run: |
+          cat stock10_bootstrap/part_* > /tmp/stock10.b64
+          base64 --decode /tmp/stock10.b64 > /tmp/stock10.tgz
+          echo '785e87856b5a924bd678aa4dcbefb43707fedd932bfdfa2bdc1391e346e0a991  /tmp/stock10.tgz' | sha256sum --check
+          mkdir -p stock10_source_export
+          tar -xzf /tmp/stock10.tgz -C stock10_source_export
+          find stock10_source_export -maxdepth 2 -type f -print
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 0930-stock10-source-v2
+          path: research/0930_multimarket/stock10_source_export/
+          if-no-files-found: error

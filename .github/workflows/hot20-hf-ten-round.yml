@@ -53,6 +53,8 @@ jobs:
               "AND CAST(datetime AS TIME) >= TIME '09:30:00'\n        AND CAST(datetime AS TIME) <  TIME '16:00:00'",
               "AND (EXTRACT(hour FROM datetime) * 60 + EXTRACT(minute FROM datetime)) >= 570\n        AND (EXTRACT(hour FROM datetime) * 60 + EXTRACT(minute FROM datetime)) < 960"
           )
+          s=s.replace('count(*) rows', 'count(*) AS row_count')
+          s=s.replace('count(DISTINCT symbol) symbols', 'count(DISTINCT symbol) AS symbol_count')
           p.write_text(s)
 
           p=Path('stock_v4_engine.py')

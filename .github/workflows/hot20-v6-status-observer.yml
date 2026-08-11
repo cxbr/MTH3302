@@ -31,7 +31,7 @@ jobs:
               src=json.load(open(path))
               return [{k:r.get(k) for k in ['id','name','status','conclusion','event','head_sha','run_number','created_at','updated_at','jobs_url','artifacts_url']} for r in src.get('workflow_runs',[])]
           out={
-              'snapshot':'after-fast-72-launch',
+              'snapshot':'after-fast-timeout-launch',
               'full_runs':compact('/tmp/full.json'),
               'fast_runs':compact('/tmp/fast.json'),
           }

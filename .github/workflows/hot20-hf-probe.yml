@@ -1,0 +1,42 @@
+name: Hot20 Hugging Face data probe
+
+on:
+  push:
+    branches:
+      - research/hot20-runner-v6-20260811
+    paths:
+      - '.github/workflows/hot20-hf-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/hot20-runner-v6-20260811
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Hugging Face client
+        run: pip install huggingface_hub
+      - name: List bars_1min files and sizes
+        run: |
+          python - <<'PY'
+          import json
+          from huggingface_hub import HfApi
+          api=HfApi()
+          items=[]
+          for item in api.list_repo_tree('twelvedata/financial-world-model', repo_type='dataset', path_in_repo='bars_1min', recursive=True, expand=True):
+              items.append({'path':getattr(item,'path',None),'size':getattr(item,'size',None),'type':type(item).__name__,'lfs':str(getattr(item,'lfs',None))})
+          print(json.dumps(items,indent=2))
+          open('hf_bars1min_tree.json','w').write(json.dumps(items,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hot20-hf-probe
+          path: hf_bars1min_tree.json
+          if-no-files-found: error

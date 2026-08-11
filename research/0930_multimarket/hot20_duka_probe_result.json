@@ -1,0 +1,195 @@
+{
+  "exported": [
+    "BufferFetcher",
+    "CacheManager",
+    "Format",
+    "Instrument",
+    "Price",
+    "RuleBoolean",
+    "RuleDate",
+    "RuleNumber",
+    "RuleObject",
+    "RuleString",
+    "Timeframe",
+    "URL_ROOT",
+    "default",
+    "defaultConfig",
+    "formatOutput",
+    "generateUrls",
+    "getCurrentRates",
+    "getHistoricRates",
+    "getHistoricalRates",
+    "getRealTimeRates",
+    "instrumentMetaData",
+    "normaliseDates",
+    "processData",
+    "schema",
+    "validateConfig",
+    "validateConfigNode"
+  ],
+  "type": "object",
+  "isArray": true,
+  "length": 52,
+  "sample": [
+    {
+      "timestamp": 1704205800000,
+      "open": 187.137,
+      "high": 188.427,
+      "low": 186.056,
+      "close": 186.247,
+      "volume": 72.744
+    },
+    {
+      "timestamp": 1704206700000,
+      "open": 186.236,
+      "high": 186.916,
+      "low": 185.997,
+      "close": 186.506,
+      "volume": 52.956
+    },
+    {
+      "timestamp": 1704207600000,
+      "open": 186.506,
+      "high": 186.957,
+      "low": 186.466,
+      "close": 186.507,
+      "volume": 51.456
+    },
+    {
+      "timestamp": 1704208500000,
+      "open": 186.526,
+      "high": 186.567,
+      "low": 186.066,
+      "close": 186.177,
+      "volume": 46.428
+    },
+    {
+      "timestamp": 1704209400000,
+      "open": 186.167,
+      "high": 186.167,
+      "low": 185.256,
+      "close": 185.517,
+      "volume": 38.64
+    },
+    {
+      "timestamp": 1704210300000,
+      "open": 185.517,
+      "high": 185.877,
+      "low": 185.177,
+      "close": 185.867,
+      "volume": 32.22
+    },
+    {
+      "timestamp": 1704211200000,
+      "open": 185.866,
+      "high": 186.827,
+      "low": 185.856,
+      "close": 186.587,
+      "volume": 33.672
+    },
+    {
+      "timestamp": 1704212100000,
+      "open": 186.597,
+      "high": 186.887,
+      "low": 186.346,
+      "close": 186.797,
+      "volume": 29.712
+    },
+    {
+      "timestamp": 1704213000000,
+      "open": 186.787,
+      "high": 187.347,
+      "low": 186.766,
+      "close": 186.956,
+      "volume": 23.124
+    },
+    {
+      "timestamp": 1704213900000,
+      "open": 186.947,
+      "high": 187.137,
+      "low": 186.637,
+      "close": 186.737,
+      "volume": 19.5
+    },
+    {
+      "timestamp": 1704214800000,
+      "open": 186.746,
+      "high": 186.946,
+      "low": 186.656,
+      "close": 186.777,
+      "volume": 21.384
+    },
+    {
+      "timestamp": 1704215700000,
+      "open": 186.766,
+      "high": 186.916,
+      "low": 186.556,
+      "close": 186.607,
+      "volume": 22.644
+    },
+    {
+      "timestamp": 1704216600000,
+      "open": 186.617,
+      "high": 187.027,
+      "low": 186.526,
+      "close": 186.866,
+      "volume": 22.44
+    },
+    {
+      "timestamp": 1704217500000,
+      "open": 186.867,
+      "high": 186.877,
+      "low": 185.836,
+      "close": 185.866,
+      "volume": 22.176
+    },
+    {
+      "timestamp": 1704218400000,
+      "open": 185.866,
+      "high": 185.946,
+      "low": 185.616,
+      "close": 185.736,
+      "volume": 18.336
+    },
+    {
+      "timestamp": 1704219300000,
+      "open": 185.726,
+      "high": 185.747,
+      "low": 185.246,
+      "close": 185.287,
+      "volume": 14.796
+    },
+    {
+      "timestamp": 1704220200000,
+      "open": 185.277,
+      "high": 185.526,
+      "low": 185.216,
+      "close": 185.377,
+      "volume": 22.656
+    },
+    {
+      "timestamp": 1704221100000,
+      "open": 185.376,
+      "high": 185.436,
+      "low": 184.737,
+      "close": 184.896,
+      "volume": 23.532
+    },
+    {
+      "timestamp": 1704222000000,
+      "open": 184.897,
+      "high": 184.977,
+      "low": 184.556,
+      "close": 184.637,
+      "volume": 21.492
+    },
+    {
+      "timestamp": 1704222900000,
+      "open": 184.626,
+      "high": 184.647,
+      "low": 184.216,
+      "close": 184.486,
+      "volume": 14.844
+    }
+  ]
+}

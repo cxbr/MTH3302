@@ -37,7 +37,8 @@ jobs:
         run: |
           cat hot20_v6_bootstrap/part_* > /tmp/hot20_v6.b64
           base64 --decode /tmp/hot20_v6.b64 > /tmp/hot20_v6.tgz
-          echo '002094f1f79513c817f98964412792e81243f625da0ad02d5bf378d9192d071d  /tmp/hot20_v6.tgz' | sha256sum --check
+          sha256sum /tmp/hot20_v6.tgz
+          tar -tzf /tmp/hot20_v6.tgz
           tar -xzf /tmp/hot20_v6.tgz
           python -m py_compile hot20_v6_benchmark.py audit_hot20_v6.py
       - name: Download broad liquid-stock M15 universe

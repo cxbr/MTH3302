@@ -5,8 +5,10 @@ on:
     paths:
       - 'research/0930_multimarket/improved_system_bug_audit.py'
       - 'research/0930_multimarket/improved_system_bug_audit_v2.py'
+      - 'research/0930_multimarket/improved_system_bug_audit_v3.py'
       - 'research/0930_multimarket/verified_improved_benchmark.py'
       - 'research/0930_multimarket/verified_improved_benchmark_v2.py'
+      - 'research/0930_multimarket/verified_improved_benchmark_v3.py'
       - '.github/workflows/0930-verified-improved-benchmark.yml'
 
 permissions:
@@ -27,10 +29,10 @@ jobs:
           pip install kagglehub pandas numpy requests pyarrow
       - name: Run bug, EMA, leakage, and execution audit
         working-directory: research/0930_multimarket
-        run: python -u improved_system_bug_audit_v2.py
+        run: python -u improved_system_bug_audit_v3.py
       - name: Run benchmark only after audit passes
         working-directory: research/0930_multimarket
-        run: python -u verified_improved_benchmark_v2.py
+        run: python -u verified_improved_benchmark_v3.py
       - name: Upload verified results
         if: always()
         uses: actions/upload-artifact@v4

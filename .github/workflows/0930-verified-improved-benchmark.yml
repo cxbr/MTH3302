@@ -1,0 +1,40 @@
+name: 0930 verified improved-system benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/improved_system_bug_audit.py'
+      - 'research/0930_multimarket/verified_improved_benchmark.py'
+      - '.github/workflows/0930-verified-improved-benchmark.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install kagglehub pandas numpy requests pyarrow
+      - name: Run bug, EMA, leakage, and execution audit
+        working-directory: research/0930_multimarket
+        run: python -u improved_system_bug_audit.py
+      - name: Run benchmark only after audit passes
+        working-directory: research/0930_multimarket
+        run: python -u verified_improved_benchmark.py
+      - name: Upload verified results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-verified-improved-benchmark-results
+          path: |
+            research/0930_multimarket/verified_bug_audit_output/
+            research/0930_multimarket/verified_improved_output/
+          if-no-files-found: warn

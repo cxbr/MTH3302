@@ -22,7 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sleep 15
+          sleep 12
           gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/direct.json
           gh api '/repos/${{ github.repository }}/actions/workflows/hot20-hf-parallel-ten-round.yml/runs?branch=research%2Fhot20-runner-v6-20260811&per_page=5' > /tmp/parallel.json
           python - <<'PY'
@@ -30,7 +30,7 @@ jobs:
           def compact(path):
               src=json.load(open(path))
               return [{k:r.get(k) for k in ['id','status','conclusion','head_sha','created_at','updated_at','artifacts_url']} for r in src.get('workflow_runs',[])]
-          out={'snapshot':'parallel-launch','direct_runs':compact('/tmp/direct.json'),'parallel_runs':compact('/tmp/parallel.json')}
+          out={'snapshot':'parallel-pytz-fix','direct_runs':compact('/tmp/direct.json'),'parallel_runs':compact('/tmp/parallel.json')}
           open('research/0930_multimarket/hot20_hf_run_status.json','w').write(json.dumps(out,indent=2))
           PY
       - name: Commit status

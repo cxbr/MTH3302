@@ -1,0 +1,75 @@
+name: 0930 cross-asset V9 benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/cross_asset_v9_bootstrap/**'
+      - '.github/workflows/0930-cross-asset-v9.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-download-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: research/0930_multimarket
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy
+          npm init -y >/dev/null 2>&1
+          npm install dukascopy-node@1.50.0
+
+      - name: Restore frozen benchmark source
+        working-directory: research/0930_multimarket
+        run: |
+          cat cross_asset_v9_bootstrap/part_* > /tmp/cross_asset_v9.b64
+          base64 --decode /tmp/cross_asset_v9.b64 > /tmp/cross_asset_v9.tgz
+          echo '882d3cbc406d3882ca5aa4248265b42da39d66d52639700a7e6af85fd4a791e5  /tmp/cross_asset_v9.tgz' | sha256sum --check
+          tar -xzf /tmp/cross_asset_v9.tgz
+          python -m py_compile cross_asset_benchmark.py audit_cross_asset_v9.py
+
+      - name: Run independent pre-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_cross_asset_v9.py
+
+      - name: Download synchronized bid and ask M15 histories
+        working-directory: research/0930_multimarket
+        run: node cross_asset_download.mjs
+
+      - name: Run ten-round cross-asset benchmark
+        working-directory: research/0930_multimarket
+        run: python -u cross_asset_benchmark.py
+
+      - name: Run independent post-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_cross_asset_v9.py --post
+
+      - name: Preserve reproducibility files
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p cross_asset_v9_output/source
+          cp cross_asset_download.mjs cross_asset_benchmark.py audit_cross_asset_v9.py cross_asset_v9_output/source/ || true
+          cp cross_asset_v9_data/download_manifest.json cross_asset_v9_output/ || true
+          npm list dukascopy-node --json > cross_asset_v9_output/npm_dependency_tree.json || true
+
+      - name: Upload complete cross-asset results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-cross-asset-v9-results
+          path: research/0930_multimarket/cross_asset_v9_output/
+          if-no-files-found: warn

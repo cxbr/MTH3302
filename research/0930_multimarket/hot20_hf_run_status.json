@@ -1,6 +1,6 @@
 {
-  "snapshot": "direct-download-run",
-  "runs": [
+  "snapshot": "parallel-launch",
+  "direct_runs": [
     {
       "id": 31490882438,
       "status": "in_progress",
@@ -45,6 +45,17 @@
       "created_at": "2026-08-11T12:08:48Z",
       "updated_at": "2026-08-11T12:09:08Z",
       "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31489836721/artifacts"
+    }
+  ],
+  "parallel_runs": [
+    {
+      "id": 31492504749,
+      "status": "in_progress",
+      "conclusion": null,
+      "head_sha": "d8583d9d5bcb7a0a3b1e0610c213bc7a4f4e1406",
+      "created_at": "2026-08-11T12:42:19Z",
+      "updated_at": "2026-08-11T12:42:22Z",
+      "artifacts_url": "https://api.github.com/repos/cxbr/MTH3302/actions/runs/31492504749/artifacts"
     }
   ]
 }

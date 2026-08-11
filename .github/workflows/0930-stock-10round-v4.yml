@@ -1,75 +1,48 @@
-name: 0930 cross-asset V9 benchmark
+name: 0930 stock-first ten-round V4 benchmark
 
 on:
   pull_request:
     paths:
-      - 'research/0930_multimarket/cross_asset_v9_chunks/**'
+      - 'research/0930_multimarket/stock10_bootstrap/**'
       - '.github/workflows/0930-stock-10round-v4.yml'
 
 permissions:
   contents: read
 
 jobs:
-  audit-download-benchmark:
+  audit-and-benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
-        working-directory: research/0930_multimarket
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy
-          npm init -y >/dev/null 2>&1
-          npm install dukascopy-node@1.50.0
-
-      - name: Restore frozen benchmark source
+          pip install kagglehub pandas numpy requests pyarrow
+      - name: Restore frozen benchmark scripts
         working-directory: research/0930_multimarket
         run: |
-          cat cross_asset_v9_chunks/chunk_* > /tmp/cross_asset_v9.b64
-          base64 --decode /tmp/cross_asset_v9.b64 > /tmp/cross_asset_v9.tgz
-          echo '882d3cbc406d3882ca5aa4248265b42da39d66d52639700a7e6af85fd4a791e5  /tmp/cross_asset_v9.tgz' | sha256sum --check
-          tar -xzf /tmp/cross_asset_v9.tgz
-          python -m py_compile cross_asset_benchmark.py audit_cross_asset_v9.py
-
+          cat stock10_bootstrap/part_* > /tmp/stock10.b64
+          base64 --decode /tmp/stock10.b64 > /tmp/stock10.tgz
+          echo '785e87856b5a924bd678aa4dcbefb43707fedd932bfdfa2bdc1391e346e0a991  /tmp/stock10.tgz' | sha256sum --check
+          tar -xzf /tmp/stock10.tgz
+          python -m py_compile stock_v4_data.py stock_v4_engine.py stock_10round_v4.py audit_stock_10round_v4.py
       - name: Run independent pre-backtest audit
         working-directory: research/0930_multimarket
-        run: python -u audit_cross_asset_v9.py
-
-      - name: Download synchronized bid and ask M15 histories
+        run: python -u audit_stock_10round_v4.py
+      - name: Run ten sequential improvement rounds
         working-directory: research/0930_multimarket
-        run: node cross_asset_download.mjs
-
-      - name: Run ten-round cross-asset benchmark
+        run: python -u stock_10round_v4.py
+      - name: Run independent post-backtest ledger audit
         working-directory: research/0930_multimarket
-        run: python -u cross_asset_benchmark.py
-
-      - name: Run independent post-backtest audit
-        working-directory: research/0930_multimarket
-        run: python -u audit_cross_asset_v9.py --post
-
-      - name: Preserve reproducibility files
-        if: always()
-        working-directory: research/0930_multimarket
-        run: |
-          mkdir -p cross_asset_v9_output/source
-          cp cross_asset_download.mjs cross_asset_benchmark.py audit_cross_asset_v9.py cross_asset_v9_output/source/ || true
-          cp cross_asset_v9_data/download_manifest.json cross_asset_v9_output/ || true
-          npm list dukascopy-node --json > cross_asset_v9_output/npm_dependency_tree.json || true
-
-      - name: Upload complete cross-asset results
+        run: python -u audit_stock_10round_v4.py --post
+      - name: Upload complete stock-first benchmark
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 0930-cross-asset-v9-results
-          path: research/0930_multimarket/cross_asset_v9_output/
+          name: 0930-stock-10round-v4-results
+          path: research/0930_multimarket/stock_10round_v4_output/
           if-no-files-found: warn

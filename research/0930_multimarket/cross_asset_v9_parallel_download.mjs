@@ -9,8 +9,6 @@ fs.mkdirSync(OUT, { recursive: true });
 const instruments = [
   ['SPY_ETF', 'spyususd', 'ETF'],
   ['QQQ_ETF', 'qqqususd', 'ETF'],
-  ['IWM_ETF', 'iwmususd', 'ETF'],
-  ['TLT_ETF', 'tltususd', 'ETF'],
   ['SP500_INDEX', 'usa500idxusd', 'Index CFD'],
   ['DAX_INDEX', 'deuidxeur', 'Index CFD'],
   ['NIKKEI_INDEX', 'jpnidxjpy', 'Index CFD'],
@@ -24,9 +22,7 @@ const instruments = [
 
 const jobs = [];
 for (const [alias, instrument, category] of instruments) {
-  for (const priceType of ['bid', 'ask']) {
-    jobs.push({ alias, instrument, category, priceType });
-  }
+  for (const priceType of ['bid', 'ask']) jobs.push({ alias, instrument, category, priceType });
 }
 
 const manifest = [];
@@ -100,7 +96,6 @@ async function worker(workerId) {
 }
 
 await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i + 1)));
-
 manifest.sort((a, b) => `${a.alias}_${a.priceType}`.localeCompare(`${b.alias}_${b.priceType}`));
 fs.writeFileSync(path.join(OUT, 'download_manifest.json'), JSON.stringify(manifest, null, 2));
 
@@ -109,6 +104,4 @@ const successfulAliases = instruments
   .filter(alias => ['bid', 'ask'].every(side => manifest.some(x => x.alias === alias && x.priceType === side && x.status === 'ok')));
 console.log(`Completed ${manifest.filter(x => x.status === 'ok').length}/${manifest.length} side downloads; ${successfulAliases.length} complete bid/ask markets`);
 console.log(`Complete markets: ${successfulAliases.join(', ')}`);
-if (successfulAliases.length < 9) {
-  throw new Error(`Only ${successfulAliases.length} complete bid/ask markets; need at least 9`);
-}
+if (successfulAliases.length < 9) throw new Error(`Only ${successfulAliases.length} complete bid/ask markets; need at least 9`);

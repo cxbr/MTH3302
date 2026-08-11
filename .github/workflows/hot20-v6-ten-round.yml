@@ -32,14 +32,17 @@ jobs:
           pip install pandas numpy pyarrow requests
           cd research/0930_multimarket
           npm install dukascopy-node@1.50.0
-      - name: Restore frozen Python benchmark and audit
+      - name: Restore and verify frozen Python benchmark and audit
         working-directory: research/0930_multimarket
         run: |
           cat hot20_v6_bootstrap/part_* > /tmp/hot20_v6.b64
           base64 --decode /tmp/hot20_v6.b64 > /tmp/hot20_v6.tgz
           sha256sum /tmp/hot20_v6.tgz
-          tar -tzf /tmp/hot20_v6.tgz
-          tar -xzf /tmp/hot20_v6.tgz
+          tar -xzf /tmp/hot20_v6.tgz || true
+          test -s hot20_v6_benchmark.py
+          test -s audit_hot20_v6.py
+          echo 'f7ef7710bc70cd960f06c3dae5667d4eb798cd551e41933dda21a28dc8a5b190  hot20_v6_benchmark.py' | sha256sum --check
+          echo 'db2d0415c1bc6ae050807b4c4a4e3044da481814a7c4334d0d4598ef2b62c823  audit_hot20_v6.py' | sha256sum --check
           python -m py_compile hot20_v6_benchmark.py audit_hot20_v6.py
       - name: Download broad liquid-stock M15 universe
         working-directory: research/0930_multimarket

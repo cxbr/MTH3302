@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      HF_XET_HIGH_PERFORMANCE: '1'
       HF_HOME: ${{ github.workspace }}/research/0930_multimarket/hot20_v6_work/hf_home
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy pyarrow duckdb huggingface_hub hf_xet
+          pip install pandas numpy pyarrow duckdb huggingface_hub
       - name: Restore and adapt audited benchmark engine
         working-directory: research/0930_multimarket
         run: |
@@ -55,6 +54,11 @@ jobs:
           )
           s=s.replace('count(*) rows', 'count(*) AS row_count')
           s=s.replace('count(DISTINCT symbol) symbols', 'count(DISTINCT symbol) AS symbol_count')
+          old='''    local = Path(\n        hf_hub_download(\n            repo_id=REPO_ID,\n            repo_type="dataset",\n            filename=filename,\n            local_dir=CACHE,\n        )\n    )'''
+          new='''    local = CACHE / filename\n    if not local.exists():\n        local = Path(\n            hf_hub_download(\n                repo_id=REPO_ID,\n                repo_type="dataset",\n                filename=filename,\n                local_dir=CACHE,\n            )\n        )'''
+          if old not in s:
+              raise RuntimeError('Could not patch local Hugging Face file preference')
+          s=s.replace(old,new)
           p.write_text(s)
 
           p=Path('stock_v4_engine.py')
@@ -74,7 +78,31 @@ jobs:
           p.write_text(s)
           PY
           python -m py_compile hot20_hf_prepare.py hot20_v6_benchmark.py audit_hot20_v6.py backtest_engine.py data_pipeline.py stock_v4_data.py stock_v4_engine.py
-      - name: Download and convert 51-stock one-minute history
+      - name: Download public one-minute files with resume and backoff
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p hot20_v6_work/hf_cache/bars_1min
+          sleep 60
+          download() {
+            split="$1"
+            output="hot20_v6_work/hf_cache/bars_1min/${split}.parquet"
+            url="https://huggingface.co/datasets/twelvedata/financial-world-model/resolve/main/bars_1min/${split}.parquet?download=true"
+            for attempt in $(seq 1 12); do
+              echo "DOWNLOAD ${split} attempt=${attempt} current_bytes=$(stat -c%s "$output" 2>/dev/null || echo 0)"
+              if curl -L --fail --retry 3 --retry-delay 20 --retry-all-errors --connect-timeout 30 --max-time 1800 -A 'Mozilla/5.0 Hot20Research/1.0' -C - -o "$output" "$url"; then
+                test -s "$output" && return 0
+              fi
+              sleep $((attempt * 20))
+            done
+            return 1
+          }
+          download train
+          sleep 20
+          download val
+          sleep 20
+          download test
+          ls -lh hot20_v6_work/hf_cache/bars_1min
+      - name: Convert 51-stock one-minute history
         working-directory: research/0930_multimarket
         run: python -u hot20_hf_prepare.py
       - name: Run independent pre-backtest audit

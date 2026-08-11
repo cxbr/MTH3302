@@ -1,0 +1,70 @@
+name: 0930 loss-forensics and patch V10 benchmark
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - 'research/0930_multimarket/loss_patch_v10_bootstrap/**'
+      - '.github/workflows/0930-loss-patch-v10.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  raw-bar-loss-audit-and-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hot20-hf-agg-*
+          path: research/0930_multimarket/hot20_hf_aggregated
+          merge-multiple: true
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Install benchmark dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz
+
+      - name: Restore frozen V10 benchmark source
+        working-directory: research/0930_multimarket
+        run: |
+          cat loss_patch_v10_bootstrap/part_* > /tmp/loss_patch_v10.b64
+          base64 --decode /tmp/loss_patch_v10.b64 > /tmp/loss_patch_v10.tgz
+          echo 'f804760b8fefe708acb3f6a8aa2b73dc4c29552b8bf445c7042010b97d45ad36  /tmp/loss_patch_v10.tgz' | sha256sum --check
+          tar -xzf /tmp/loss_patch_v10.tgz
+          python -m py_compile backtest_engine.py data_pipeline.py stock_v4_data.py stock_v4_engine.py hot20_v6_benchmark.py hot20_hf_finalize.py loss_patch_v10.py
+
+      - name: Rebuild the synchronized 50-stock M15 universe
+        working-directory: research/0930_multimarket
+        run: python -u hot20_hf_finalize.py --input-dir hot20_hf_aggregated
+
+      - name: Run raw-bar loss audit and multi-universe patch benchmark
+        working-directory: research/0930_multimarket
+        run: python -u loss_patch_v10.py
+
+      - name: Preserve source and preparation manifests
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p loss_patch_v10_output/source
+          cp loss_patch_v10.py hot20_v6_benchmark.py stock_v4_engine.py stock_v4_data.py backtest_engine.py data_pipeline.py loss_patch_v10_output/source/ || true
+          cp hot20_v6_work/periods.json hot20_v6_work/hf_prepare_manifest.json loss_patch_v10_output/ || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-loss-patch-v10-results
+          path: research/0930_multimarket/loss_patch_v10_output/
+          if-no-files-found: warn
+          retention-days: 90

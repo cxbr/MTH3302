@@ -1,0 +1,214 @@
+name: 0930 blind money-and-winrate V14
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - 'research/0930_multimarket/v14_engine.py'
+      - 'research/0930_multimarket/blind_hot20_v14.py'
+      - 'research/0930_multimarket/prepare_hidden_v14.py'
+      - 'research/0930_multimarket/blind_eval_v14.py'
+      - '.github/workflows/0930-blind-money-v14.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  optimize-pre2024:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download train split only
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 engine source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Install dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn
+
+      - name: Restore source and compile V14
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/*.py .
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py \
+            v14_engine.py blind_hot20_v14.py prepare_hidden_v14.py blind_eval_v14.py \
+            backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Build strictly pre-2024 train universe
+        working-directory: research/0930_multimarket
+        run: |
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v14_work
+
+      - name: Optimize money, win rate, weekend risk, exits, and portfolio breadth
+        working-directory: research/0930_multimarket
+        run: python -u blind_hot20_v14.py
+
+      - name: Preserve source and pre-hidden boundary
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p blind_hot20_v14_output/source
+          cp v14_engine.py blind_hot20_v14.py prepare_hidden_v14.py blind_eval_v14.py \
+             prepare_train_only.py blind_hot20_exit_v13.py backtest_engine.py \
+             data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py \
+             blind_hot20_v14_output/source/ || true
+          cp hot20_v14_work/periods.json hot20_v14_work/train_only_manifest.json \
+             blind_hot20_v14_output/ || true
+
+      - name: Upload frozen pre-2024 optimization
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-v14-pre2024-optimization
+          path: research/0930_multimarket/blind_hot20_v14_output/
+          if-no-files-found: error
+          retention-days: 90
+
+  blind-evaluate-2024-2026:
+    needs: optimize-pre2024
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      HF_HOME: /tmp/hf_home
+      HF_XET_HIGH_PERFORMANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download frozen V14 policies and pre-hidden outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-v14-pre2024-optimization
+          path: research/0930_multimarket/blind_hot20_v14_output
+
+      - name: Download train split for indicator continuity
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 engine source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Install evaluator dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn huggingface_hub hf_xet
+
+      - name: Restore source and compile hidden evaluator
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/*.py .
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py \
+            v14_engine.py blind_hot20_v14.py prepare_hidden_v14.py blind_eval_v14.py \
+            backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Rebuild pre-2024 raw bars for continuity
+        working-directory: research/0930_multimarket
+        run: |
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v14_work
+
+      - name: Download current sealed validation and test splits after policy freeze
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from huggingface_hub import HfApi, hf_hub_download
+
+          repo = 'twelvedata/financial-world-model'
+          info = HfApi().dataset_info(repo_id=repo, repo_type='dataset')
+          root = Path('hidden_hf')
+          root.mkdir(parents=True, exist_ok=True)
+          paths = {}
+          for key, filename in {
+              'validation': 'bars_1min/val.parquet',
+              'test': 'bars_1min/test.parquet',
+          }.items():
+              paths[key] = hf_hub_download(
+                  repo_id=repo,
+                  repo_type='dataset',
+                  filename=filename,
+                  revision=info.sha,
+                  local_dir=str(root),
+              )
+          payload = {'dataset_sha': info.sha, 'paths': paths}
+          (root / 'download_manifest.json').write_text(json.dumps(payload, indent=2))
+          print(json.dumps(payload, indent=2))
+          PY
+
+      - name: Build hidden 2024-2026 M15 data without exposing it to optimizer
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('hidden_hf/download_manifest.json').read_text())
+          Path('hidden_hf/val_path.txt').write_text(p['paths']['validation'])
+          Path('hidden_hf/test_path.txt').write_text(p['paths']['test'])
+          Path('hidden_hf/dataset_sha.txt').write_text(p['dataset_sha'])
+          PY
+          python -u prepare_hidden_v14.py \
+            --val "$(cat hidden_hf/val_path.txt)" \
+            --test "$(cat hidden_hf/test_path.txt)" \
+            --dataset-sha "$(cat hidden_hf/dataset_sha.txt)"
+
+      - name: Run aggregate-only blind evaluation
+        working-directory: research/0930_multimarket
+        run: python -u blind_eval_v14.py
+
+      - name: Enforce aggregate-only result artifact
+        working-directory: research/0930_multimarket
+        run: |
+          test -f blind_hot20_v14_blind_output/blind_aggregate_performance.csv
+          test -f blind_hot20_v14_blind_output/blind_audit.csv
+          if find blind_hot20_v14_blind_output -type f | grep -Eiq '(trade|ledger|stock|instrument|entry|exit_reason)'; then
+            echo 'Forbidden hidden trade-level output detected'
+            find blind_hot20_v14_blind_output -type f
+            exit 1
+          fi
+          cp hot20_v14_full/hidden_manifest.json blind_hot20_v14_blind_output/
+
+      - name: Upload sealed aggregate performance only
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-v14-blind-2024-2026-performance
+          path: research/0930_multimarket/blind_hot20_v14_blind_output/
+          if-no-files-found: error
+          retention-days: 90

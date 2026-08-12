@@ -5,6 +5,7 @@ import json
 import math
 import shutil
 from collections import defaultdict
+from dataclasses import MISSING
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -60,15 +61,25 @@ def restore_special(value):
     return value
 
 
+def restore_policy_payload(payload: dict) -> dict:
+    """Restore null non-finite fields to the frozen dataclass defaults."""
+    restored = restore_special(payload)
+    for name, field in V14Policy.__dataclass_fields__.items():
+        if restored.get(name) is None and field.default is not MISSING:
+            restored[name] = field.default
+    return restored
+
+
 def main() -> None:
     frozen_path = PRE_OUT / "frozen_hidden_policies.json"
     manifest_path = FULL_WORK / "hidden_manifest.json"
     if not frozen_path.exists() or not manifest_path.exists():
         raise RuntimeError("Missing frozen policy file or hidden manifest")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    frozen_payload = restore_special(
-        json.loads(frozen_path.read_text(encoding="utf-8"))
-    )
+    frozen_payload = [
+        restore_policy_payload(payload)
+        for payload in json.loads(frozen_path.read_text(encoding="utf-8"))
+    ]
     policies = [V14Policy(**payload) for payload in frozen_payload]
     if not policies:
         raise RuntimeError("No frozen policies")

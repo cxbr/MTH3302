@@ -1,0 +1,74 @@
+name: 0930 blind pre-2024 dynamic Hot20 V13
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - 'research/0930_multimarket/blind_hot20_v13_bootstrap/**'
+      - '.github/workflows/0930-blind-hot20-v13.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  blind-pre2024-hot20-optimization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hot20-hf-agg-*
+          path: research/0930_multimarket/hot20_hf_aggregated
+          merge-multiple: true
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Install benchmark dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests
+
+      - name: Restore audited raw-bar engine and blind V13 source
+        working-directory: research/0930_multimarket
+        run: |
+          cat loss_patch_v10_bootstrap/part_* > /tmp/loss_patch_v10.b64
+          base64 --decode /tmp/loss_patch_v10.b64 > /tmp/loss_patch_v10.tgz
+          echo 'f804760b8fefe708acb3f6a8aa2b73dc4c29552b8bf445c7042010b97d45ad36  /tmp/loss_patch_v10.tgz' | sha256sum --check
+          tar -xzf /tmp/loss_patch_v10.tgz
+          cat blind_hot20_v13_bootstrap/part_* > /tmp/blind_hot20_v13.py.gz.b64
+          base64 --decode /tmp/blind_hot20_v13.py.gz.b64 > /tmp/blind_hot20_v13.py.gz
+          echo '67f7f56d4a9570ab289e617aff2f3266e1e2a31556e4e6b5b1d6bd653ddd3802  /tmp/blind_hot20_v13.py.gz' | sha256sum --check
+          gzip -dc /tmp/blind_hot20_v13.py.gz > blind_hot20_v13.py
+          python -m py_compile backtest_engine.py data_pipeline.py stock_v4_data.py stock_v4_engine.py hot20_v6_benchmark.py hot20_hf_finalize.py loss_patch_v10.py blind_hot20_v13.py
+
+      - name: Rebuild synchronized 50-stock M15 bars
+        working-directory: research/0930_multimarket
+        run: python -u hot20_hf_finalize.py --input-dir hot20_hf_aggregated
+
+      - name: Run physically quarantined pre-2024 Hot20 optimization
+        working-directory: research/0930_multimarket
+        run: python -u blind_hot20_v13.py
+
+      - name: Preserve source and manifests
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p blind_hot20_v13_output/source
+          cp blind_hot20_v13.py loss_patch_v10.py hot20_v6_benchmark.py stock_v4_engine.py stock_v4_data.py backtest_engine.py data_pipeline.py blind_hot20_v13_output/source/ || true
+          cp hot20_v6_work/periods.json hot20_v6_work/hf_prepare_manifest.json blind_hot20_v13_output/ || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-blind-hot20-v13-results
+          path: research/0930_multimarket/blind_hot20_v13_output/
+          if-no-files-found: warn
+          retention-days: 90

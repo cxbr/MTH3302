@@ -5,6 +5,7 @@ on:
     branches:
       - research/0930-multimarket-backtest-20260810
     paths:
+      - 'research/0930_multimarket/blind_eval_v14.py'
       - '.github/workflows/0930-v14-hidden-only.yml'
 
 permissions:

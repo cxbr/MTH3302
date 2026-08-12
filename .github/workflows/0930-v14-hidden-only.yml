@@ -1,0 +1,160 @@
+name: 0930 V14 sealed hidden evaluation only
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - '.github/workflows/0930-v14-hidden-only.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  blind-evaluate-frozen-2024-2026:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      HF_HOME: /tmp/hf_home
+      HF_XET_HIGH_PERFORMANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download frozen policies from completed pre-2024 run
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-v14-pre2024-optimization
+          path: research/0930_multimarket/blind_hot20_v14_output
+          run-id: 31647437244
+          github-token: ${{ github.token }}
+
+      - name: Download train split for indicator continuity
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Install dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn huggingface_hub hf_xet
+
+      - name: Restore source and compile evaluator
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/*.py .
+          python - <<'PY'
+          from pathlib import Path
+          engine = Path('v14_engine.py')
+          source = engine.read_text(encoding='utf-8')
+          needle = '    family: str = "v14"\n'
+          replacement = (
+              '    partial_tf: str = "1h"\n'
+              '    runner_tf: str = "4h"\n'
+              '    trail_tf: str = "4h"\n\n'
+              '    family: str = "v14"\n'
+          )
+          if '    partial_tf: str = "1h"\n' not in source:
+              if needle not in source:
+                  raise RuntimeError('V14 timeframe patch target not found')
+              engine.write_text(source.replace(needle, replacement, 1), encoding='utf-8')
+          PY
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py \
+            v14_engine.py prepare_hidden_v14.py blind_eval_v14.py \
+            backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Rebuild pre-2024 bars for indicator continuity
+        working-directory: research/0930_multimarket
+        run: |
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v14_work
+
+      - name: Download current hidden splits after the recorded freeze
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from huggingface_hub import HfApi, hf_hub_download
+
+          repo = 'twelvedata/financial-world-model'
+          info = HfApi().dataset_info(repo_id=repo)
+          root = Path('hidden_hf')
+          root.mkdir(parents=True, exist_ok=True)
+          paths = {}
+          for key, filename in {
+              'validation': 'bars_1min/val.parquet',
+              'test': 'bars_1min/test.parquet',
+          }.items():
+              paths[key] = hf_hub_download(
+                  repo_id=repo,
+                  repo_type='dataset',
+                  filename=filename,
+                  revision=info.sha,
+                  local_dir=str(root),
+              )
+          payload = {
+              'dataset_sha': info.sha,
+              'paths': paths,
+              'frozen_policy_artifact_run': 31647437244,
+          }
+          (root / 'download_manifest.json').write_text(json.dumps(payload, indent=2))
+          print(json.dumps(payload, indent=2))
+          PY
+
+      - name: Build sealed 2024-2026 M15 data
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('hidden_hf/download_manifest.json').read_text())
+          Path('hidden_hf/val_path.txt').write_text(p['paths']['validation'])
+          Path('hidden_hf/test_path.txt').write_text(p['paths']['test'])
+          Path('hidden_hf/dataset_sha.txt').write_text(p['dataset_sha'])
+          PY
+          python -u prepare_hidden_v14.py \
+            --val "$(cat hidden_hf/val_path.txt)" \
+            --test "$(cat hidden_hf/test_path.txt)" \
+            --dataset-sha "$(cat hidden_hf/dataset_sha.txt)"
+
+      - name: Run aggregate-only evaluation of frozen policies
+        working-directory: research/0930_multimarket
+        run: python -u blind_eval_v14.py
+
+      - name: Enforce aggregate-only artifact
+        working-directory: research/0930_multimarket
+        run: |
+          test -f blind_hot20_v14_blind_output/blind_aggregate_performance.csv
+          test -f blind_hot20_v14_blind_output/blind_audit.csv
+          if find blind_hot20_v14_blind_output -type f | grep -Eiq '(trade|ledger|stock|instrument|entry|exit_reason)'; then
+            echo 'Forbidden hidden trade-level output detected'
+            find blind_hot20_v14_blind_output -type f
+            exit 1
+          fi
+          cp hot20_v14_full/hidden_manifest.json blind_hot20_v14_blind_output/
+          cp hidden_hf/download_manifest.json blind_hot20_v14_blind_output/hidden_download_manifest.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-v14-blind-2024-2026-performance
+          path: research/0930_multimarket/blind_hot20_v14_blind_output/
+          if-no-files-found: error
+          retention-days: 90

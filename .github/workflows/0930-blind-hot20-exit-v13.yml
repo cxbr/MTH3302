@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: research/0930-multimarket-backtest-20260810
+          ref: 250fccde58b838f0170f14e847a19a5c42032fed
 
       - uses: actions/setup-python@v5
         with:

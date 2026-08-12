@@ -48,6 +48,17 @@ jobs:
           base64 --decode /tmp/blind_hot20_v13.b64 > /tmp/blind_hot20_v13.tgz
           echo 'bed84baa71ffd49418a494a57c293a9dfa5790a12a9f848ba69d6db13e5b8799  /tmp/blind_hot20_v13.tgz' | sha256sum --check
           tar -xzf /tmp/blind_hot20_v13.tgz
+
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('blind_hot20_exit_v13.py')
+          source = path.read_text(encoding='utf-8')
+          old = '''    unique = {}\n    for p in policies:\n        unique[p.trade_signature()] = p\n    return list(unique.values())'''
+          new = '''    unique = {}\n    for p in policies:\n        unique.setdefault(p.trade_signature(), p)\n    return list(unique.values())'''
+          if old not in source:
+              raise RuntimeError('V13 stage-one deduplication patch target not found')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
           python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
 
       - name: Build train-only 2020-2023 universe and enforce quarantine

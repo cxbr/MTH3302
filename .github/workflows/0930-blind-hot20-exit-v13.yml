@@ -1,0 +1,75 @@
+name: 0930 blind dynamic-hot20 and exit V13
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - 'research/0930_multimarket/blind_hot20_v13_bootstrap/**'
+      - '.github/workflows/0930-blind-hot20-exit-v13.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  train-only-hot20-exit-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download the pre-2024 train artifact only
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Install dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn
+
+      - name: Restore audited engine and V13 research source
+        working-directory: research/0930_multimarket
+        run: |
+          cat loss_patch_v10_bootstrap/part_* > /tmp/loss_patch_v10.b64
+          base64 --decode /tmp/loss_patch_v10.b64 > /tmp/loss_patch_v10.tgz
+          echo 'f804760b8fefe708acb3f6a8aa2b73dc4c29552b8bf445c7042010b97d45ad36  /tmp/loss_patch_v10.tgz' | sha256sum --check
+          tar -xzf /tmp/loss_patch_v10.tgz
+
+          cat blind_hot20_v13_bootstrap/part_* > /tmp/blind_hot20_v13.b64
+          base64 --decode /tmp/blind_hot20_v13.b64 > /tmp/blind_hot20_v13.tgz
+          echo 'bed84baa71ffd49418a494a57c293a9dfa5790a12a9f848ba69d6db13e5b8799  /tmp/blind_hot20_v13.tgz' | sha256sum --check
+          tar -xzf /tmp/blind_hot20_v13.tgz
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Build train-only 2020-2023 universe and enforce quarantine
+        working-directory: research/0930_multimarket
+        run: python -u prepare_train_only.py --input hot20_hf_train/train_15m.parquet
+
+      - name: Run dynamic hot-20, win-rate, exit, trailing, and snapshot-model research
+        working-directory: research/0930_multimarket
+        run: python -u blind_hot20_exit_v13.py
+
+      - name: Preserve source and data-boundary manifest
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p blind_hot20_exit_v13_output/source
+          cp prepare_train_only.py blind_hot20_exit_v13.py backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py blind_hot20_exit_v13_output/source/ || true
+          cp hot20_v13_work/periods.json hot20_v13_work/train_only_manifest.json blind_hot20_exit_v13_output/ || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/blind_hot20_exit_v13_output/
+          if-no-files-found: warn
+          retention-days: 90

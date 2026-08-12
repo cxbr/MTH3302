@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
 from collections import defaultdict
 from pathlib import Path
@@ -42,13 +43,33 @@ def safe(value):
     return v13.safe(value)
 
 
+def restore_special(value):
+    """Reverse the safe JSON representation used by the frozen-policy artifact."""
+    if isinstance(value, str):
+        if value == "Infinity":
+            return math.inf
+        if value == "-Infinity":
+            return -math.inf
+        if value == "NaN":
+            return math.nan
+        return value
+    if isinstance(value, list):
+        return [restore_special(item) for item in value]
+    if isinstance(value, dict):
+        return {key: restore_special(item) for key, item in value.items()}
+    return value
+
+
 def main() -> None:
     frozen_path = PRE_OUT / "frozen_hidden_policies.json"
     manifest_path = FULL_WORK / "hidden_manifest.json"
     if not frozen_path.exists() or not manifest_path.exists():
         raise RuntimeError("Missing frozen policy file or hidden manifest")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    policies = [V14Policy(**payload) for payload in json.loads(frozen_path.read_text(encoding="utf-8"))]
+    frozen_payload = restore_special(
+        json.loads(frozen_path.read_text(encoding="utf-8"))
+    )
+    policies = [V14Policy(**payload) for payload in frozen_payload]
     if not policies:
         raise RuntimeError("No frozen policies")
 

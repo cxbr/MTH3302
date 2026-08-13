@@ -70,7 +70,7 @@ jobs:
           cp v14_pre_artifact/source/prepare_hidden_v14.py .
           cat v15_bundle.part00 v15_bundle.part01 v15_bundle.part02 v15_bundle.part03 v15_bundle.part04 > v15_bundle.full.b64
           base64 -d v15_bundle.full.b64 > v15_bundle.tgz
-          echo 'a3c22b46558974f57e84e1dbbd5959741394151fde5c9a35d3ad74a67675e70f  v15_bundle.tgz' | sha256sum -c -
+          echo 'aed90de473a6eeedb9eab9fa4affa0bac1cbc68c2c03b0312b825d7bd8bd83c8  v15_bundle.tgz' | sha256sum -c -
           tar -xzf v15_bundle.tgz
           python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py v14_engine.py \
             v15_common.py v15_research.py blind_eval_v15.py prepare_hidden_v14.py \
@@ -166,7 +166,7 @@ jobs:
           cp v14_pre_artifact/source/prepare_hidden_v14.py .
           cat v15_bundle.part00 v15_bundle.part01 v15_bundle.part02 v15_bundle.part03 v15_bundle.part04 > v15_bundle.full.b64
           base64 -d v15_bundle.full.b64 > v15_bundle.tgz
-          echo 'a3c22b46558974f57e84e1dbbd5959741394151fde5c9a35d3ad74a67675e70f  v15_bundle.tgz' | sha256sum -c -
+          echo 'aed90de473a6eeedb9eab9fa4affa0bac1cbc68c2c03b0312b825d7bd8bd83c8  v15_bundle.tgz' | sha256sum -c -
           tar -xzf v15_bundle.tgz
           python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py v14_engine.py \
             v15_common.py blind_eval_v15.py prepare_hidden_v14.py \

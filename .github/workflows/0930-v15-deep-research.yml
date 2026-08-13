@@ -1,0 +1,272 @@
+name: 0930 V15 deep research and sealed aggregate evaluation
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - 'research/0930_multimarket/v15_bundle.part00'
+      - 'research/0930_multimarket/v15_bundle.part01'
+      - 'research/0930_multimarket/v15_bundle.part02'
+      - 'research/0930_multimarket/v15_bundle.part03'
+      - 'research/0930_multimarket/v15_bundle.part04'
+      - '.github/workflows/0930-v15-deep-research.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+
+jobs:
+  optimize-pre2024:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download train split only
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Download audited V14 pre-hidden source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-v14-pre2024-optimization
+          path: research/0930_multimarket/v14_pre_artifact
+          run-id: 31647437244
+          github-token: ${{ github.token }}
+
+      - name: Install dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn huggingface_hub hf_xet
+
+      - name: Restore engines and decode V15 source
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/*.py .
+          cp v14_pre_artifact/source/v14_engine.py .
+          cp v14_pre_artifact/source/prepare_hidden_v14.py .
+          cat v15_bundle.part00 v15_bundle.part01 v15_bundle.part02 v15_bundle.part03 v15_bundle.part04 > v15_bundle.full.b64
+          base64 -d v15_bundle.full.b64 > v15_bundle.tgz
+          echo 'aed90de473a6eeedb9eab9fa4affa0bac1cbc68c2c03b0312b825d7bd8bd83c8  v15_bundle.tgz' | sha256sum -c -
+          tar -xzf v15_bundle.tgz
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py v14_engine.py \
+            v15_common.py v15_research.py blind_eval_v15.py prepare_hidden_v14.py \
+            backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Build strictly pre-2024 stock universe
+        working-directory: research/0930_multimarket
+        run: |
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v15_work
+
+      - name: Run nested V15 research laboratory
+        working-directory: research/0930_multimarket
+        run: python -u v15_research.py
+
+      - name: Preserve source, manifests, and freeze boundary
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p blind_hot20_v15_output/source
+          cp v15_common.py v15_research.py blind_eval_v15.py \
+             prepare_train_only.py prepare_hidden_v14.py blind_hot20_exit_v13.py \
+             v14_engine.py backtest_engine.py data_pipeline.py hot20_v6_benchmark.py \
+             stock_v4_data.py stock_v4_engine.py blind_hot20_v15_output/source/ || true
+          cp hot20_v15_work/periods.json blind_hot20_v15_output/train_only_manifest.json || true
+          printf '%s\n' '2024-2026 was not loaded by the optimizer. Finalists were frozen before hidden evaluation.' \
+            > blind_hot20_v15_output/HIDDEN_BOUNDARY.txt
+
+      - name: Upload frozen pre-2024 V15 research
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-v15-pre2024-deep-research
+          path: research/0930_multimarket/blind_hot20_v15_output/
+          if-no-files-found: error
+          retention-days: 90
+
+  sealed-challenge-2024-2026:
+    needs: optimize-pre2024
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      HF_HOME: /tmp/hf_home
+      HF_XET_HIGH_PERFORMANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download frozen V15 policies and research output
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-v15-pre2024-deep-research
+          path: research/0930_multimarket/blind_hot20_v15_output
+
+      - name: Download train split for indicator continuity
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Download audited V14 source utilities
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-v14-pre2024-optimization
+          path: research/0930_multimarket/v14_pre_artifact
+          run-id: 31647437244
+          github-token: ${{ github.token }}
+
+      - name: Install evaluator dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn huggingface_hub hf_xet
+
+      - name: Restore engines and decode identical V15 source
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/*.py .
+          cp v14_pre_artifact/source/v14_engine.py .
+          cp v14_pre_artifact/source/prepare_hidden_v14.py .
+          cat v15_bundle.part00 v15_bundle.part01 v15_bundle.part02 v15_bundle.part03 v15_bundle.part04 > v15_bundle.full.b64
+          base64 -d v15_bundle.full.b64 > v15_bundle.tgz
+          echo 'aed90de473a6eeedb9eab9fa4affa0bac1cbc68c2c03b0312b825d7bd8bd83c8  v15_bundle.tgz' | sha256sum -c -
+          tar -xzf v15_bundle.tgz
+          python -m py_compile prepare_train_only.py blind_hot20_exit_v13.py v14_engine.py \
+            v15_common.py blind_eval_v15.py prepare_hidden_v14.py \
+            backtest_engine.py data_pipeline.py hot20_v6_benchmark.py stock_v4_data.py stock_v4_engine.py
+
+      - name: Rebuild pre-2024 raw bars for indicator continuity
+        working-directory: research/0930_multimarket
+        run: |
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v15_work
+
+      - name: Download current validation and test splits after policy freeze
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from huggingface_hub import HfApi, hf_hub_download
+
+          repo = 'twelvedata/financial-world-model'
+          info = HfApi().dataset_info(repo_id=repo)
+          root = Path('hidden_hf_v15')
+          root.mkdir(parents=True, exist_ok=True)
+          paths = {}
+          for key, filename in {
+              'validation': 'bars_1min/val.parquet',
+              'test': 'bars_1min/test.parquet',
+          }.items():
+              paths[key] = hf_hub_download(
+                  repo_id=repo,
+                  repo_type='dataset',
+                  filename=filename,
+                  revision=info.sha,
+                  local_dir=str(root),
+              )
+          payload = {
+              'dataset_sha': info.sha,
+              'paths': paths,
+              'policy_file': 'blind_hot20_v15_output/frozen_hidden_policies_v15.json',
+          }
+          (root / 'download_manifest.json').write_text(json.dumps(payload, indent=2))
+          print(json.dumps({'dataset_sha': info.sha, 'files': list(paths)}, indent=2))
+          PY
+
+      - name: Build sealed 2024-2026 M15 data
+        working-directory: research/0930_multimarket
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('hidden_hf_v15/download_manifest.json').read_text())
+          Path('hidden_hf_v15/val_path.txt').write_text(p['paths']['validation'])
+          Path('hidden_hf_v15/test_path.txt').write_text(p['paths']['test'])
+          Path('hidden_hf_v15/dataset_sha.txt').write_text(p['dataset_sha'])
+          PY
+          python -u prepare_hidden_v14.py \
+            --train-raw hot20_v15_work/raw \
+            --val "$(cat hidden_hf_v15/val_path.txt)" \
+            --test "$(cat hidden_hf_v15/test_path.txt)" \
+            --output-work hot20_v15_full \
+            --dataset-sha "$(cat hidden_hf_v15/dataset_sha.txt)"
+
+      - name: Run aggregate-only V15 challenge evaluation
+        working-directory: research/0930_multimarket
+        run: python -u blind_eval_v15.py
+
+      - name: Enforce aggregate-only output and sanitize manifest
+        working-directory: research/0930_multimarket
+        run: |
+          test -f blind_hot20_v15_blind_output/blind_aggregate_performance.csv
+          test -f blind_hot20_v15_blind_output/blind_audit.csv
+          if find blind_hot20_v15_blind_output -type f | grep -Eiq '(trade|ledger|stock|instrument|entry_time|exit_time|exit_reason|feature)'; then
+            echo 'Forbidden hidden trade-level output detected'
+            find blind_hot20_v15_blind_output -type f
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          source = json.loads(Path('hot20_v15_full/hidden_manifest.json').read_text())
+          clean = {
+              'dataset': source['dataset'],
+              'dataset_revision': source['dataset_revision'],
+              'hidden_bounds': source['hidden_bounds'],
+              'hidden_rows_15m': source['hidden_rows_15m'],
+              'hidden_symbol_count': source['hidden_symbol_count'],
+              'periods': source['periods'],
+              'privacy_boundary': source['privacy_boundary'],
+          }
+          Path('blind_hot20_v15_blind_output/hidden_manifest_sanitized.json').write_text(
+              json.dumps(clean, indent=2, sort_keys=True)
+          )
+          PY
+
+      - name: Upload sealed aggregate V15 performance
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 0930-v15-blind-2024-2026-performance
+          path: research/0930_multimarket/blind_hot20_v15_blind_output/
+          if-no-files-found: error
+          retention-days: 90

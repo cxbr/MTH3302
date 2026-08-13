@@ -1,0 +1,42 @@
+name: 0930 full five-market backtest
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/data_pipeline.py'
+      - 'research/0930_multimarket/backtest_engine.py'
+      - 'research/0930_multimarket/run_benchmark.py'
+      - 'research/0930_multimarket/add_reclaim_high_variant.py'
+      - '.github/workflows/0930-full-backtest.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install kagglehub pandas numpy requests pyarrow
+      - name: Run exact weekly + 09:30 system and 365 comparison variants
+        working-directory: research/0930_multimarket
+        run: |
+          sed -i 's/market\.atr14\[:\] = 1\.0/market.atr14 = np.full_like(market.atr14, 1.0)/' backtest_engine.py
+          python -u add_reclaim_high_variant.py
+          python -m py_compile data_pipeline.py backtest_engine.py run_benchmark.py
+          python -u run_benchmark.py
+          cp data_pipeline.py backtest_engine.py run_benchmark.py add_reclaim_high_variant.py output/
+      - name: Upload complete results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-five-market-backtest-results-v2
+          path: research/0930_multimarket/output/
+          if-no-files-found: warn

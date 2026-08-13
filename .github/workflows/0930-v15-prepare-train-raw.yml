@@ -1,0 +1,62 @@
+name: 0930 V15 prepare pre-2024 raw bars
+
+on:
+  push:
+    branches:
+      - research/0930-multimarket-backtest-20260810
+    paths:
+      - '.github/workflows/0930-v15-prepare-train-raw.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  prepare-train-raw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/0930-multimarket-backtest-20260810
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download train split
+        uses: actions/download-artifact@v4
+        with:
+          name: hot20-hf-agg-train
+          path: research/0930_multimarket/hot20_hf_train
+          run-id: 31492910051
+          github-token: ${{ github.token }}
+
+      - name: Download audited V13 source
+        uses: actions/download-artifact@v4
+        with:
+          name: 0930-blind-hot20-exit-v13-results
+          path: research/0930_multimarket/v13_source_artifact
+          run-id: 31625841020
+          github-token: ${{ github.token }}
+
+      - name: Install dependencies
+        run: pip install pandas numpy pyarrow duckdb pytz requests scikit-learn
+
+      - name: Prepare strictly pre-2024 raw bars
+        working-directory: research/0930_multimarket
+        run: |
+          cp v13_source_artifact/source/prepare_train_only.py .
+          python -u prepare_train_only.py \
+            --input hot20_hf_train/train_15m.parquet \
+            --work-dir hot20_v15_work
+
+      - name: Upload raw bars
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-v15-pre2024-raw-bars
+          path: |
+            research/0930_multimarket/hot20_v15_work/raw/
+            research/0930_multimarket/hot20_v15_work/periods.json
+          if-no-files-found: error
+          retention-days: 90

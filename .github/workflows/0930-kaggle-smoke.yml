@@ -1,0 +1,31 @@
+name: 0930 Kaggle archive validation
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/kaggle_smoke.py'
+      - '.github/workflows/0930-kaggle-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install kagglehub pandas pyarrow
+      - name: Inspect public historical archives
+        run: python research/0930_multimarket/kaggle_smoke.py
+      - name: Upload validation metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-kaggle-metadata
+          path: research/0930_multimarket/kaggle_smoke_output/
+          if-no-files-found: warn

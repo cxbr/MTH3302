@@ -1,0 +1,117 @@
+name: 0930 cross-asset V9 benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'research/0930_multimarket/cross_asset_v9_chunks/**'
+      - 'research/0930_multimarket/cross_asset_v9_parallel_download.mjs'
+      - '.github/workflows/0930-cross-asset-v9.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-download-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: research/0930_multimarket
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy
+          npm init -y >/dev/null 2>&1
+          npm install dukascopy-node@1.50.0
+
+      - name: Restore and patch frozen benchmark source
+        working-directory: research/0930_multimarket
+        run: |
+          cat cross_asset_v9_chunks/chunk_* > /tmp/cross_asset_v9.b64
+          base64 --decode /tmp/cross_asset_v9.b64 > /tmp/cross_asset_v9.tgz
+          echo '882d3cbc406d3882ca5aa4248265b42da39d66d52639700a7e6af85fd4a791e5  /tmp/cross_asset_v9.tgz' | sha256sum --check
+          tar -xzf /tmp/cross_asset_v9.tgz
+          python - <<'PY'
+          from pathlib import Path
+
+          audit = Path('audit_cross_asset_v9.py')
+          source = audit.read_text(encoding='utf-8')
+          old = 'rows.append({"test": name, "pass": bool(condition), "details": json.dumps(details, sort_keys=True)})'
+          new = 'rows.append({"test": name, "pass": bool(condition), "details": json.dumps(details, sort_keys=True, default=lambda value: value.item() if hasattr(value, "item") else str(value))})'
+          if old in source:
+              source = source.replace(old, new, 1)
+          audit.write_text(source, encoding='utf-8')
+
+          engine = Path('cross_asset_benchmark.py')
+          source = engine.read_text(encoding='utf-8')
+          old = '        close_until(trade.entry_ts)\n        local_date = trade.entry_ts.tz_convert("America/New_York").date()'
+          new = '        close_until(trade.entry_ts)\n        # Real portfolio rule: never hold two concurrent positions in the same instrument.\n        if any(position["alias"] == trade.alias for position in open_positions):\n            continue\n        local_date = trade.entry_ts.tz_convert("America/New_York").date()'
+          if old not in source:
+              raise SystemExit('Expected portfolio replay insertion point not found')
+          source = source.replace(old, new, 1)
+          source = source.replace('(math.inf if wins else math.nan)', '(999.0 if wins else math.nan)')
+          engine.write_text(source, encoding='utf-8')
+          PY
+          python -m py_compile cross_asset_benchmark.py audit_cross_asset_v9.py
+          node --check cross_asset_v9_parallel_download.mjs
+
+      - name: Run independent pre-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_cross_asset_v9.py
+
+      - name: Restore cross-asset data cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            research/0930_multimarket/.dukascopy-cache
+            research/0930_multimarket/cross_asset_v9_data
+          key: cross-asset-v9-m15-2020-2025-v2-${{ github.run_id }}
+          restore-keys: |
+            cross-asset-v9-m15-2020-2025-v2-
+
+      - name: Download synchronized bid and ask M15 histories
+        working-directory: research/0930_multimarket
+        run: node cross_asset_v9_parallel_download.mjs
+
+      - name: Save cross-asset data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            research/0930_multimarket/.dukascopy-cache
+            research/0930_multimarket/cross_asset_v9_data
+          key: cross-asset-v9-m15-2020-2025-v2-${{ github.run_id }}
+
+      - name: Run ten-round cross-asset benchmark
+        working-directory: research/0930_multimarket
+        run: python -u cross_asset_benchmark.py
+
+      - name: Run independent post-backtest audit
+        working-directory: research/0930_multimarket
+        run: python -u audit_cross_asset_v9.py --post
+
+      - name: Preserve reproducibility files
+        if: always()
+        working-directory: research/0930_multimarket
+        run: |
+          mkdir -p cross_asset_v9_output/source
+          cp cross_asset_v9_parallel_download.mjs cross_asset_download.mjs cross_asset_benchmark.py audit_cross_asset_v9.py cross_asset_v9_output/source/ || true
+          cp cross_asset_v9_data/download_manifest.json cross_asset_v9_output/ || true
+          npm list dukascopy-node --json > cross_asset_v9_output/npm_dependency_tree.json || true
+
+      - name: Upload complete cross-asset results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0930-cross-asset-v9-results
+          path: research/0930_multimarket/cross_asset_v9_output/
+          if-no-files-found: warn
